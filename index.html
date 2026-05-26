@@ -57,11 +57,12 @@ body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-seri
 .team-list { display: flex; flex-direction: column; gap: 10px; font-size: 0.85rem; }
 .team-item { background: var(--surface2); padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(42,48,69,0.3); display: flex; flex-direction: column; gap: 4px; }
 
-/* Warna Badge Jabatan EMS */
+/* 🎨 PEWARNAAN BADGE JABATAN RESMI VALORIA */
 .rank-head { background: rgba(255,118,117,0.15); color: #ff7675; border: 1px solid #ff7675; }
 .rank-deputy { background: rgba(255,168,1,0.15); color: #ffa801; border: 1px solid #ffa801; }
+.rank-secretariat { background: rgba(255,118,243,0.15); color: #ff76f3; border: 1px solid #ff76f3; }
 .rank-dokter { background: rgba(116,185,255,0.15); color: #74b9ff; border: 1px solid #74b9ff; }
-.rank-paramedic { background: rgba(162,155,254,0.15); color: #a29bfe; border: 1px solid #a29bfe; }
+.rank-pmd { background: rgba(162,155,254,0.15); color: #a29bfe; border: 1px solid #a29bfe; }
 .rank-emt { background: rgba(85,239,196,0.15); color: #55efc4; border: 1px solid #55efc4; }
 .rank-default { background: rgba(107,116,144,0.15); color: #6b7490; border: 1px solid #6b7490; }
 </style>
@@ -81,11 +82,12 @@ body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-seri
   <div class="control-group">
     <label style="color: var(--accent4);">📋 PILIH JABATAN PANGKAT:</label>
     <select id="selectRank" class="control-input" onchange="toggleCustomRankInput()">
-      <option value="Head Of Ems">Head Of Ems</option>
-      <option value="Deputy Of Ems">Deputy Of Ems</option>
-      <option value="Dokter Spesialis">Dokter Spesialis</option>
-      <option value="Paramedic">Paramedic</option>
-      <option value="Emt">Emt</option>
+      <option value="HEAD OF EMS">HEAD OF EMS</option>
+      <option value="DEPUTY OF EMS">DEPUTY OF EMS</option>
+      <option value="SECRETARIAT">SECRETARIAT</option>
+      <option value="DOKTER">DOKTER</option>
+      <option value="PMD">PMD</option>
+      <option value="EMT">EMT</option>
       <option value="KUSTOM">-- Tulis Jabatan Kustom --</option>
     </select>
   </div>
@@ -259,7 +261,7 @@ function fetchGoogleSheetsData(forceRender = false) {
     userRanks = {};
     rawAnggotaData.forEach(row => {
       if(row['Nama Anggota']) {
-        userRanks[row['Nama Anggota']] = row['Jabatan'] || 'Emt';
+        userRanks[row['Nama Anggota']] = row['Jabatan'] || 'EMT';
       }
     });
 
@@ -294,11 +296,12 @@ function parseCSV(text) {
 
 function getRankClass(rank) {
   if(!rank) return 'rank-default';
-  const r = rank.toLowerCase();
+  const r = rank.toLowerCase().trim();
   if(r.includes('head')) return 'rank-head';
   if(r.includes('deputy')) return 'rank-deputy';
-  if(r.includes('spesialis') || r.includes('dokter')) return 'rank-dokter';
-  if(r.includes('paramedic')) return 'rank-paramedic';
+  if(r.includes('secretariat')) return 'rank-secretariat';
+  if(r.includes('dokter') || r.includes('spesialis')) return 'rank-dokter';
+  if(r.includes('pmd') || r.includes('paramedic')) return 'rank-pmd';
   if(r.includes('emt')) return 'rank-emt';
   return 'rank-default';
 }
@@ -307,23 +310,38 @@ function renderTeamList(anggotaList) {
   const container = document.getElementById('teamListContainer');
   container.innerHTML = '';
   if(anggotaList.length === 0) {
-    container.innerHTML = '<div style="color:var(--muted); font-size:0.8rem;">Belum ada anggota resmi terdaftar.</div>';
+    container.innerHTML = '<div style="color:var(--muted); font-size:0.8rem; text-align:center;">Belum ada anggota resmi terdaftar.</div>';
     return;
   }
   
-  const hirarkiOrder = ['head of ems', 'deputy of ems', 'dokter spesialis', 'paramedic', 'emt'];
+  // 📋 SUSUNAN HIERARKI MUTLAK ZHAGI (1 - 6)
+  const hirarkiOrder = [
+    'head of ems',
+    'deputy of ems',
+    'secretariat',
+    'dokter',
+    'dokter spesialis',
+    'pmd',
+    'paramedic',
+    'emt'
+  ];
   
   let sortedList = [...anggotaList].sort((a, b) => {
-    let rA = (a['Jabatan'] || 'Emt').toLowerCase();
-    let rB = (b['Jabatan'] || 'Emt').toLowerCase();
+    let rA = (a['Jabatan'] || 'EMT').toLowerCase().trim();
+    let rB = (b['Jabatan'] || 'EMT').toLowerCase().trim();
+    
     let idxA = hirarkiOrder.indexOf(rA);
     let idxB = hirarkiOrder.indexOf(rB);
-    return (idxA === -1 ? 99 : idxA) - (idxB === -1 ? 99 : idxB);
+    
+    if (idxA === -1) idxA = 999;
+    if (idxB === -1) idxB = 999;
+    
+    return idxA - idxB;
   });
 
   sortedList.forEach((member) => {
     if(!member['Nama Anggota']) return;
-    const rank = member['Jabatan'] || 'Emt';
+    const rank = member['Jabatan'] || 'EMT';
     const rankClass = getRankClass(rank);
     container.innerHTML += `
       <div class="team-item">
@@ -405,7 +423,7 @@ function processAndRender() {
         </div>`;
     });
 
-    const rank = userRanks[member.name] || 'Emt';
+    const rank = userRanks[member.name] || 'EMT';
     const rankClass = getRankClass(rank);
 
     const card = document.createElement('div');
@@ -463,7 +481,7 @@ function exportToExcel() {
   const week = document.getElementById('weekStart').value;
   const table = document.getElementById('reportTable');
   const wb = XLSX.utils.table_to_book(table, { sheet: "Rekap Absensi" });
-  Xcontent.writeFile(wb, `Rekap_Absensi_EMS_Valoria_Minggu_${week}.xlsx`);
+  XLSX.writeFile(wb, `Rekap_Absensi_EMS_Valoria_Minggu_${week}.xlsx`);
 }
 
 function exportToPDF() {
