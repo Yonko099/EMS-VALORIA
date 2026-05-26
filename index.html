@@ -314,7 +314,7 @@ function renderTeamList(anggotaList) {
     return;
   }
   
-  // 📋 SUSUNAN HIERARKI MUTLAK ZHAGI (1 - 6)
+  // 📋 SUSUNAN HIERARKI MUTLAK VALORIA (1 SAMPAI 6)
   const hirarkiOrder = [
     'head of ems',
     'deputy of ems',
@@ -373,20 +373,28 @@ function processAndRender() {
     filtered = filtered.filter(row => row['Nama Anggota'] && row['Nama Anggota'].toLowerCase().includes(searchQuery));
   }
   
+  // LOGIKA MULTI-ENTRY: Mengelompokkan data per nama, lalu per hari (bisa muat banyak baris sekaligus)
   const grouped = {};
   filtered.forEach(row => {
     const name = row['Nama Anggota'];
     if(!name) return;
+    
     if(!grouped[name]) {
       grouped[name] = { name: name, days: {} };
     }
-    grouped[name].days[row['Hari']] = {
+    
+    const hari = row['Hari'];
+    if(!grouped[name].days[hari]) {
+      grouped[name].days[hari] = [];
+    }
+    
+    grouped[name].days[hari].push({
       startTime: row['Jam Masuk'],
       endTime: row['Jam Keluar'],
       treatment: parseInt(row['Treatment']) || 0,
       pingsan: parseInt(row['Pingsan']) || 0,
       alprazolam: parseInt(row['Alprazolam']) || 0
-    };
+    });
   });
 
   const names = Object.keys(grouped);
@@ -405,21 +413,51 @@ function processAndRender() {
     let daysHtml = '';
 
     HARI_URUTAN.forEach(h => {
-      const d = member.days[h] || { startTime: '', endTime: '', treatment: 0, pingsan: 0, alprazolam: 0 };
+      const records = member.days[h] || [];
       
-      if(d.startTime && d.endTime) {
-        const [sH, sM] = d.startTime.split(':').map(Number);
-        const [eH, eM] = d.endTime.split(':').map(Number);
-        let diff = (eH*60+eM) - (sH*60+sM); if(diff<0) diff+=1440;
-        tHours += (diff/60);
+      if(records.length === 0) {
+        daysHtml += `
+          <div class="day-box">
+            <div class="day-name">${h}</div>
+            <div style="color:var(--muted); font-family:'DM Mono'; margin-bottom:3px;">— / —</div>
+            <div style="color:var(--muted); font-size:0.65rem; line-height:1.2;">🟢 T:0 | 🔴 P:0 | 💊 A:0</div>
+          </div>`;
+        return;
       }
-      tTreat += d.treatment; tPing += d.pingsan; tAlpra += d.alprazolam;
+
+      let dayHours = 0, dayTreat = 0, dayPing = 0, dayAlpra = 0;
+      let timeRangesText = [];
+
+      // Akumulasikan semua baris data di hari yang sama ke penampung lokal
+      records.forEach(d => {
+        if(d.startTime && d.endTime) {
+          const [sH, sM] = d.startTime.split(':').map(Number);
+          const [eH, eM] = d.endTime.split(':').map(Number);
+          let diff = (eH*60+eM) - (sH*60+sM); if(diff<0) diff+=1440;
+          dayHours += (diff/60);
+          tHours += (diff/60);
+        }
+        dayTreat += d.treatment;
+        dayPing += d.pingsan;
+        dayAlpra += d.alprazolam;
+        
+        tTreat += d.treatment;
+        tPing += d.pingsan;
+        tAlpra += d.alprazolam;
+
+        if(d.startTime && d.endTime) {
+          timeRangesText.push(`${d.startTime}-${d.endTime}`);
+        }
+      });
+
+      let finalTimeText = timeRangesText.length > 0 ? timeRangesText.join('<br>') : '—/—';
 
       daysHtml += `
         <div class="day-box">
           <div class="day-name">${h}</div>
-          <div style="color:#fff; font-family:'DM Mono'; margin-bottom:3px;">${d.startTime || '—'}/${d.endTime || '—'}</div>
-          <div style="color:var(--muted); font-size:0.65rem; line-height:1.2;">🟢 T:${d.treatment}<br>🔴 P:${d.pingsan}<br>💊 A:${d.alprazolam}</div>
+          <div style="color:#fff; font-family:'DM Mono'; font-size:0.7rem; margin-bottom:3px; line-height:1.2;">${finalTimeText}</div>
+          <div style="color:var(--accent4); font-size:0.65rem; line-height:1.2; font-weight:600;">⏱️ ${dayHours.toFixed(1)} jam</div>
+          <div style="color:var(--muted); font-size:0.65rem; line-height:1.2; margin-top:2px;">🟢 T:${dayTreat}<br>🔴 P:${dayPing}<br>💊 A:${dayAlpra}</div>
         </div>`;
     });
 
