@@ -19,7 +19,7 @@ body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-seri
 .control-panel { background: var(--surface); padding: 20px; border-radius: 16px; border: 1px solid var(--border); margin-bottom: 24px; display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; }
 .control-group { display: flex; flex-direction: column; gap: 5px; }
 .control-group label { font-size: 0.75rem; color: var(--muted); font-weight: 600; }
-.control-input { background: var(--bg); border: 1px solid var(--border); color: #fff; padding: 10px 14px; border-radius: 8px; font-family: 'Syne', sans-serif; font-size: 0.85rem; outline: none; min-width: 200px; }
+.control-input { background: var(--bg); border: 1px solid var(--border); color: #fff; padding: 10px 14px; border-radius: 8px; font-family: 'Syne', sans-serif; font-size: 0.85rem; outline: none; min-width: 160px; }
 .control-input:focus { border-color: var(--accent); }
 .status-badge { background: rgba(79,255,176,0.1); color: var(--accent); padding: 8px 14px; border-radius: 8px; font-family: 'DM Mono', monospace; font-size: 0.8rem; margin-left: auto; align-self: center; }
 
@@ -29,8 +29,10 @@ body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-seri
 .btn-excel:hover { border-color: #2ecc71; color: #2ecc71; }
 .btn-pdf:hover { border-color: #e74c3c; color: #e74c3c; }
 
+.price-box { border-left: 2px solid var(--border); padding-left: 20px; display: flex; gap: 15px; }
+
 .dashboard-layout { display: grid; grid-template-columns: 1fr 300px; gap: 24px; }
-@media (max-width: 1000px) { .dashboard-layout { grid-template-columns: 1fr; } }
+@media (max-width: 1000px) { .dashboard-layout { grid-template-columns: 1fr; .price-box { border-left: none; padding-left: 0; } } }
 .member-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; margin-bottom: 14px; padding: 15px; }
 .member-top { display: flex; align-items: center; gap: 10px; font-weight: 700; margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 8px; color: #fff; }
 .days-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
@@ -64,8 +66,18 @@ body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-seri
     <input type="text" id="searchName" class="control-input" placeholder="Ketik nama tim..." oninput="processAndRender()">
   </div>
 
-  <div class="control-group">
-    <label>EXPORT DATA REKAPAN MINGGU INI:</label>
+  <div class="price-box">
+    <div class="control-group">
+      <label>💰 HARGA TREATMENT ($):</label>
+      <input type="number" id="priceTreatment" class="control-input" value="35" style="width: 90px; min-width: 90px; font-family: 'DM Mono';" oninput="processAndRender()">
+    </div>
+    <div class="control-group">
+      <label>💰 HARGA PINGSAN ($):</label>
+      <input type="number" id="pricePingsan" class="control-input" value="45" style="width: 90px; min-width: 90px; font-family: 'DM Mono';" oninput="processAndRender()">
+    </div>
+  </div>
+
+  <div class="control-group" style="margin-left: 10px;">
     <div class="btn-group">
       <button class="btn btn-excel" onclick="exportToExcel()">📊 Export Excel</button>
       <button class="btn btn-pdf" onclick="exportToPDF()">📑 Cetak PDF</button>
@@ -81,7 +93,7 @@ body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-seri
 
     <table class="summary-table" id="reportTable">
       <thead>
-        <tr><th>Nama Anggota</th><th>Total Jam</th><th>Treatment</th><th>Pingsan</th><th>Alprazolam</th><th>Total Income</th></tr>
+        <tr><th>Nama Anggota</th><th>Total Jam</th><th>Treatment</th><th>Pingsan</th><th>Total Income</th></tr>
       </thead>
       <tbody id="summaryBody"></tbody>
     </table>
@@ -163,10 +175,13 @@ function renderTeamList(anggotaList) {
   });
 }
 
-// FUNGSI UTAMA UNTUK FILTER MINGGU & SEARCH NAMA SECARA REALTIME
 function processAndRender() {
   const selectedWeek = document.getElementById('weekStart').value;
   const searchQuery = document.getElementById('searchName').value.toLowerCase().trim();
+  
+  // Mengambil nominal dinamis dari input form Atur Harga
+  const rateTreatment = parseFloat(document.getElementById('priceTreatment').value) || 0;
+  const ratePingsan = parseFloat(document.getElementById('pricePingsan').value) || 0;
   
   const container = document.getElementById('membersContainer');
   const tbody = document.getElementById('summaryBody');
@@ -174,10 +189,8 @@ function processAndRender() {
   container.innerHTML = '';
   tbody.innerHTML = '';
   
-  // Filter berdasarkan Minggu Kontrak
   let filtered = rawAbsenData.filter(row => row['Minggu Kontrak'] === selectedWeek);
   
-  // Filter berdasarkan Search Nama Anggota
   if(searchQuery !== '') {
     filtered = filtered.filter(row => row['Nama Anggota'] && row['Nama Anggota'].toLowerCase().includes(searchQuery));
   }
@@ -193,8 +206,7 @@ function processAndRender() {
       startTime: row['Jam Masuk'],
       endTime: row['Jam Keluar'],
       treatment: parseInt(row['Treatment']) || 0,
-      pingsan: parseInt(row['Pingsan']) || 0,
-      alpra: parseInt(row['Alprazolam']) || 0
+      pingsan: parseInt(row['Pingsan']) || 0
     };
   });
 
@@ -210,11 +222,11 @@ function processAndRender() {
 
   names.forEach(name => {
     const member = grouped[name];
-    let tHours = 0, tTreat = 0, tPing = 0, tAlpra = 0;
+    let tHours = 0, tTreat = 0, tPing = 0;
     let daysHtml = '';
 
     HARI_URUTAN.forEach(h => {
-      const d = member.days[h] || { startTime: '', endTime: '', treatment: 0, pingsan: 0, alpra: 0 };
+      const d = member.days[h] || { startTime: '', endTime: '', treatment: 0, pingsan: 0 };
       
       if(d.startTime && d.endTime) {
         const [sH, sM] = d.startTime.split(':').map(Number);
@@ -222,7 +234,7 @@ function processAndRender() {
         let diff = (eH*60+eM) - (sH*60+sM); if(diff<0) diff+=1440;
         tHours += (diff/60);
       }
-      tTreat += d.treatment; tPing += d.pingsan; tAlpra += d.alpra;
+      tTreat += d.treatment; tPing += d.pingsan;
 
       daysHtml += `
         <div class="day-box">
@@ -237,7 +249,8 @@ function processAndRender() {
     card.innerHTML = `<div class="member-top">👤 ${member.name}</div><div class="days-grid">${daysHtml}</div>`;
     container.appendChild(card);
 
-    let income = (tTreat * 35) + (tPing * 45) + (tAlpra * 15);
+    // KONTROL HARGA DIKALIKAN SECARA DINAMIS
+    let income = (tTreat * rateTreatment) + (tPing * ratePingsan);
     chartLabels.push(member.name);
     chartIncomes.push(income);
 
@@ -247,7 +260,6 @@ function processAndRender() {
         <td>${tHours.toFixed(1)} jam</td>
         <td>${tTreat} org</td>
         <td>${tPing} org</td>
-        <td>${tAlpra} pcs</td>
         <td style="color:var(--accent); font-weight:bold;">$${income}</td>
       </tr>`;
   });
@@ -268,7 +280,6 @@ function renderChart(labels, data) {
   });
 }
 
-// FITUR CONVERT: CONVERT TABEL KE EXCEL (.XLSX)
 function exportToExcel() {
   const week = document.getElementById('weekStart').value;
   const table = document.getElementById('reportTable');
@@ -276,7 +287,6 @@ function exportToExcel() {
   XLSX.writeFile(wb, `Rekap_Absensi_Valoria_Minggu_${week}.xlsx`);
 }
 
-// FITUR CONVERT: CONVERT TABEL KE PDF (.PDF)
 function exportToPDF() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
