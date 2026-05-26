@@ -115,21 +115,33 @@ const CSV_ANGGOTA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQdcWhr
 
 let rawAbsenData = [];
 let rawAnggotaData = [];
+let lastFetchedAbsenRaw = "";    // Memori penyimpan data string absen sebelumnya
+let lastFetchedAnggotaRaw = "";  // Memori penyimpan data string anggota sebelumnya
 let mainChart = null;
 
 window.addEventListener('load', () => {
   const sun = new Date(); sun.setDate(sun.getDate() - sun.getDay());
   document.getElementById('weekStart').value = sun.toISOString().split('T')[0];
-  fetchGoogleSheetsData();
-  setInterval(fetchGoogleSheetsData, 5000); // Sinkronisasi otomatis tiap 5 detik
+  fetchGoogleSheetsData(true); // Isian TRUE mendefinisikan paksa render di awal muat halaman
+  setInterval(() => fetchGoogleSheetsData(false), 15000); // Sinkronisasi otomatis pintar ditingkatkan jadi tiap 15 detik
 });
 
-function fetchGoogleSheetsData() {
+function fetchGoogleSheetsData(forceRender = false) {
   Promise.all([
-    fetch(CSV_ABSEN_URL).then(res => res.text()),
-    fetch(CSV_ANGGOTA_URL).then(res => res.text())
+    fetch(CSV_ABSEN_URL + '&cachebust=' + Date.now()).then(res => res.text()), // Ditambahkan pencegah sangkutan cache browser lama
+    fetch(CSV_ANGGOTA_URL + '&cachebust=' + Date.now()).then(res => res.text())
   ])
   .then(([csvAbsen, csvAnggota]) => {
+    // 🛡️ PROTEKSI ANTI-KEDIP: Periksa apakah ada baris data yang bener-bener berubah di Sheets
+    if (!forceRender && csvAbsen === lastFetchedAbsenRaw && csvAnggota === lastFetchedAnggotaRaw) {
+      // Jika data sama persis, hentikan proses render agar komponen layar tidak berkedip dobel!
+      return; 
+    }
+    
+    // Simpan data mentah terbaru ke memori pembanding
+    lastFetchedAbsenRaw = csvAbsen;
+    lastFetchedAnggotaRaw = csvAnggota;
+
     rawAbsenData = parseCSV(csvAbsen);
     rawAnggotaData = parseCSV(csvAnggota);
     
@@ -179,7 +191,6 @@ function processAndRender() {
   const selectedWeek = document.getElementById('weekStart').value;
   const searchQuery = document.getElementById('searchName').value.toLowerCase().trim();
   
-  // Mengambil nominal dinamis dari input form Atur Harga
   const rateTreatment = parseFloat(document.getElementById('priceTreatment').value) || 0;
   const ratePingsan = parseFloat(document.getElementById('pricePingsan').value) || 0;
   
@@ -249,7 +260,6 @@ function processAndRender() {
     card.innerHTML = `<div class="member-top">👤 ${member.name}</div><div class="days-grid">${daysHtml}</div>`;
     container.appendChild(card);
 
-    // KONTROL HARGA DIKALIKAN SECARA DINAMIS
     let income = (tTreat * rateTreatment) + (tPing * ratePingsan);
     chartLabels.push(member.name);
     chartIncomes.push(income);
@@ -276,7 +286,16 @@ function renderChart(labels, data) {
       labels: labels,
       datasets: [{ label: 'Income ($)', data: data, backgroundColor: 'rgba(79, 255, 176, 0.3)', borderColor: '#4fffb0', borderWidth: 2, borderRadius: 5 }]
     },
-    options: { responsive: true, maintainAspectRatio: false, scales: { y: { grid: { color: '#2a3045' }, ticks: { color: '#6b7490' } }, x: { grid: { display: false }, ticks: { color: '#6b7490' } } }, plugins: { legend: { labels: { color: '#e8eaf0', font: { family: 'Syne' } } } } }
+    options: { 
+      responsive: true, 
+      maintainAspectRatio: false, 
+      animation: false, // 🟢 SANGAT PENTING: Mematikan animasi kejut agar grafik batang tidak berkedip melompat
+      scales: { 
+        y: { grid: { color: '#2a3045' }, ticks: { color: '#6b7490' } }, 
+        x: { grid: { display: false }, ticks: { color: '#6b7490' } } 
+      }, 
+      plugins: { legend: { labels: { color: '#e8eaf0', font: { family: 'Syne' } } } } 
+    }
   });
 }
 
