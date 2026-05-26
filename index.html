@@ -10,7 +10,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
 
 <style>
-:root { --bg: #0d0f14; --surface: #161a23; --surface2: #1e2330; --border: #2a3045; --accent: #4fffb0; --accent4: #74b9ff; --text: #e8eaf0; --muted: #6b7490; --danger: #ff7675; }
+:root { --bg: #0d0f14; --surface: #161a23; --surface2: #1e2330; --border: #2a3045; --accent: #4fffb0; --accent4: #74b9ff; --text: #e8eaf0; --muted: #6b7490; --danger: #ff7675; --warning: #ffeaa7; }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; padding: 24px 16px; }
 .header { text-align: center; margin-bottom: 24px; }
@@ -19,22 +19,28 @@ body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-seri
 .control-panel { background: var(--surface); padding: 20px; border-radius: 16px; border: 1px solid var(--border); margin-bottom: 24px; display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; }
 .control-group { display: flex; flex-direction: column; gap: 5px; }
 .control-group label { font-size: 0.75rem; color: var(--muted); font-weight: 600; }
-.control-input { background: var(--bg); border: 1px solid var(--border); color: #fff; padding: 10px 14px; border-radius: 8px; font-family: 'Syne', sans-serif; font-size: 0.85rem; outline: none; min-width: 160px; }
+.control-input { background: var(--bg); border: 1px solid var(--border); color: #fff; padding: 10px 14px; border-radius: 8px; font-family: 'Syne', sans-serif; font-size: 0.85rem; outline: none; min-width: 140px; }
 .control-input:focus { border-color: var(--accent); }
 .status-badge { background: rgba(79,255,176,0.1); color: var(--accent); padding: 8px 14px; border-radius: 8px; font-family: 'DM Mono', monospace; font-size: 0.8rem; margin-left: auto; align-self: center; }
 
-.btn-group { display: flex; gap: 10px; }
-.btn { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 10px 16px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: all 0.2s; }
+.btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 10px 14px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 6px; transition: all 0.2s; }
 .btn:hover { border-color: var(--accent); background: rgba(79,255,176,0.05); }
 .btn-excel:hover { border-color: #2ecc71; color: #2ecc71; }
 .btn-pdf:hover { border-color: #e74c3c; color: #e74c3c; }
+.btn-danger { border-color: var(--danger); color: var(--danger); }
+.btn-danger:hover { background: rgba(255,118,117,0.1); border-color: #d63031; }
+.btn-reset-mini { padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; background: rgba(255,118,117,0.1); border: 1px solid var(--danger); color: var(--danger); cursor: pointer; }
+.btn-reset-mini:hover { background: var(--danger); color: #fff; }
 
-.price-box { border-left: 2px solid var(--border); padding-left: 20px; display: flex; gap: 15px; }
+.price-box { border-left: 2px solid var(--border); padding-left: 20px; display: flex; flex-wrap: wrap; gap: 12px; }
 
-.dashboard-layout { display: grid; grid-template-columns: 1fr 300px; gap: 24px; }
-@media (max-width: 1000px) { .dashboard-layout { grid-template-columns: 1fr; .price-box { border-left: none; padding-left: 0; } } }
+.dashboard-layout { display: grid; grid-template-columns: 1fr 320px; gap: 24px; }
+@media (max-width: 1100px) { .dashboard-layout { grid-template-columns: 1fr; .price-box { border-left: none; padding-left: 0; } } }
 .member-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; margin-bottom: 14px; padding: 15px; }
-.member-top { display: flex; align-items: center; gap: 10px; font-weight: 700; margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 8px; color: #fff; }
+.member-top { display: flex; justify-content: space-between; align-items: center; font-weight: 700; margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 8px; color: #fff; }
+.member-badge { font-size: 0.7rem; padding: 4px 8px; border-radius: 6px; text-transform: uppercase; font-family: 'DM Mono', monospace; }
+
 .days-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
 .day-box { background: var(--surface2); padding: 8px; border-radius: 8px; font-size: 0.75rem; border: 1px solid rgba(42,48,69,0.5); }
 .day-name { color: var(--accent4); font-weight: bold; margin-bottom: 4px; }
@@ -42,17 +48,26 @@ body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-seri
 .summary-table th, .summary-table td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
 .summary-table th { background: var(--surface2); color: var(--muted); font-weight: 600; }
 .chart-section { background: var(--surface); padding: 20px; border-radius: 16px; border: 1px solid var(--border); margin-top: 24px; height: 320px; }
+
 .sidebar-panel { background: var(--surface); padding: 20px; border-radius: 16px; border: 1px solid var(--border); height: fit-content; }
 .sidebar-title { font-size: 1rem; font-weight: 700; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 8px; color: var(--accent4); }
-.team-list { display: flex; flex-direction: column; gap: 8px; font-size: 0.85rem; }
-.team-item { background: var(--surface2); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(42,48,69,0.3); display: flex; align-items: center; gap: 8px; }
+.team-list { display: flex; flex-direction: column; gap: 10px; font-size: 0.85rem; }
+.team-item { background: var(--surface2); padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(42,48,69,0.3); display: flex; flex-direction: column; gap: 4px; }
+
+/* Warna Badge Jabatan EMS */
+.rank-head { background: rgba(255,118,117,0.15); color: #ff7675; border: 1px solid #ff7675; }
+.rank-deputy { background: rgba(255,168,1,0.15); color: #ffa801; border: 1px solid #ffa801; }
+.rank-dokter { background: rgba(116,185,255,0.15); color: #74b9ff; border: 1px solid #74b9ff; }
+.rank-paramedic { background: rgba(162,155,254,0.15); color: #a29bfe; border: 1px solid #a29bfe; }
+.rank-emt { background: rgba(85,239,196,0.15); color: #55efc4; border: 1px solid #55efc4; }
+.rank-default { background: rgba(107,116,144,0.15); color: #6b7490; border: 1px solid #6b7490; }
 </style>
 </head>
 <body>
 
 <div class="header">
   <h1>⚡ Dashboard Absensi Cloud Valoria</h1>
-  <p style="color: var(--muted); font-size: 0.85rem; margin-top: 5px; font-family: 'DM Mono', monospace;">REAL-TIME COLLABORATION VIA GOOGLE SHEETS LIVE SYNC</p>
+  <p style="color: var(--muted); font-size: 0.85rem; margin-top: 5px; font-family: 'DM Mono', monospace;">REKAP & STRUKTUR MANAGEMENT EMS VALORIA SYSTEM</p>
 </div>
 
 <div class="control-panel">
@@ -68,19 +83,24 @@ body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-seri
 
   <div class="price-box">
     <div class="control-group">
-      <label>💰 HARGA TREATMENT ($):</label>
-      <input type="number" id="priceTreatment" class="control-input" value="35" style="width: 90px; min-width: 90px; font-family: 'DM Mono';" oninput="processAndRender()">
+      <label>💰 TREATMENT ($):</label>
+      <input type="number" id="priceTreatment" class="control-input" value="35" style="width: 75px; min-width: 75px; font-family: 'DM Mono';" oninput="processAndRender()">
     </div>
     <div class="control-group">
-      <label>💰 HARGA PINGSAN ($):</label>
-      <input type="number" id="pricePingsan" class="control-input" value="45" style="width: 90px; min-width: 90px; font-family: 'DM Mono';" oninput="processAndRender()">
+      <label>💰 PINGSAN ($):</label>
+      <input type="number" id="pricePingsan" class="control-input" value="45" style="width: 75px; min-width: 75px; font-family: 'DM Mono';" oninput="processAndRender()">
+    </div>
+    <div class="control-group">
+      <label>💊 ALPRAZOLAM ($):</label>
+      <input type="number" id="priceAlprazolam" class="control-input" value="50" style="width: 75px; min-width: 75px; font-family: 'DM Mono';" oninput="processAndRender()">
     </div>
   </div>
 
-  <div class="control-group" style="margin-left: 10px;">
+  <div class="control-group" style="margin-left: 5px;">
     <div class="btn-group">
-      <button class="btn btn-excel" onclick="exportToExcel()">📊 Export Excel</button>
-      <button class="btn btn-pdf" onclick="exportToPDF()">📑 Cetak PDF</button>
+      <button class="btn btn-excel" onclick="exportToExcel()">📊 Excel</button>
+      <button class="btn btn-pdf" onclick="exportToPDF()">📑 PDF</button>
+      <button class="btn btn-danger" onclick="resetAllData()">⚠️ Reset Semua</button>
     </div>
   </div>
 
@@ -93,7 +113,7 @@ body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-seri
 
     <table class="summary-table" id="reportTable">
       <thead>
-        <tr><th>Nama Anggota</th><th>Total Jam</th><th>Treatment</th><th>Pingsan</th><th>Total Income</th></tr>
+        <tr><th>Nama Anggota</th><th>Total Jam</th><th>Treatment</th><th>Pingsan</th><th>Alprazolam</th><th>Total Income</th><th>Aksi</th></tr>
       </thead>
       <tbody id="summaryBody"></tbody>
     </table>
@@ -102,9 +122,9 @@ body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-seri
   </div>
 
   <div class="sidebar-panel">
-    <div class="sidebar-title">📋 Anggota Resmi Terdaftar</div>
+    <div class="sidebar-title">📋 Struktur Organisasi EMS Resmi</div>
     <div id="teamListContainer" class="team-list">
-      <div style="color:var(--muted); font-size:0.8rem; text-align:center;">Memuat daftar tim...</div>
+      <div style="color:var(--muted); font-size:0.8rem; text-align:center;">Memuat struktur jabatan...</div>
     </div>
   </div>
 </div>
@@ -115,36 +135,42 @@ const CSV_ANGGOTA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQdcWhr
 
 let rawAbsenData = [];
 let rawAnggotaData = [];
-let lastFetchedAbsenRaw = "";    // Memori penyimpan data string absen sebelumnya
-let lastFetchedAnggotaRaw = "";  // Memori penyimpan data string anggota sebelumnya
+let lastFetchedAbsenRaw = "";    
+let lastFetchedAnggotaRaw = "";  
 let mainChart = null;
+let userRanks = {}; // Object penampung relasi Nama -> Jabatan
 
 window.addEventListener('load', () => {
   const sun = new Date(); sun.setDate(sun.getDate() - sun.getDay());
   document.getElementById('weekStart').value = sun.toISOString().split('T')[0];
-  fetchGoogleSheetsData(true); // Isian TRUE mendefinisikan paksa render di awal muat halaman
-  setInterval(() => fetchGoogleSheetsData(false), 15000); // Sinkronisasi otomatis pintar ditingkatkan jadi tiap 15 detik
+  fetchGoogleSheetsData(true); 
+  setInterval(() => fetchGoogleSheetsData(false), 15000); // Auto sync mulus tiap 15 detik
 });
 
 function fetchGoogleSheetsData(forceRender = false) {
   Promise.all([
-    fetch(CSV_ABSEN_URL + '&cachebust=' + Date.now()).then(res => res.text()), // Ditambahkan pencegah sangkutan cache browser lama
+    fetch(CSV_ABSEN_URL + '&cachebust=' + Date.now()).then(res => res.text()), 
     fetch(CSV_ANGGOTA_URL + '&cachebust=' + Date.now()).then(res => res.text())
   ])
   .then(([csvAbsen, csvAnggota]) => {
-    // 🛡️ PROTEKSI ANTI-KEDIP: Periksa apakah ada baris data yang bener-bener berubah di Sheets
     if (!forceRender && csvAbsen === lastFetchedAbsenRaw && csvAnggota === lastFetchedAnggotaRaw) {
-      // Jika data sama persis, hentikan proses render agar komponen layar tidak berkedip dobel!
       return; 
     }
     
-    // Simpan data mentah terbaru ke memori pembanding
     lastFetchedAbsenRaw = csvAbsen;
     lastFetchedAnggotaRaw = csvAnggota;
 
     rawAbsenData = parseCSV(csvAbsen);
     rawAnggotaData = parseCSV(csvAnggota);
     
+    // mapping jabatan
+    userRanks = {};
+    rawAnggotaData.forEach(row => {
+      if(row['Nama Anggota']) {
+        userRanks[row['Nama Anggota']] = row['Jabatan'] || 'Emt';
+      }
+    });
+
     renderTeamList(rawAnggotaData);
     processAndRender();
     
@@ -174,16 +200,45 @@ function parseCSV(text) {
   return result;
 }
 
+function getRankClass(rank) {
+  if(!rank) return 'rank-default';
+  const r = rank.toLowerCase();
+  if(r.includes('head')) return 'rank-head';
+  if(r.includes('deputy')) return 'rank-deputy';
+  if(r.includes('spesialis') || r.includes('dokter')) return 'rank-dokter';
+  if(r.includes('paramedic')) return 'rank-paramedic';
+  if(r.includes('emt')) return 'rank-emt';
+  return 'rank-default';
+}
+
 function renderTeamList(anggotaList) {
   const container = document.getElementById('teamListContainer');
   container.innerHTML = '';
   if(anggotaList.length === 0) {
-    container.innerHTML = '<div style="color:var(--muted); font-size:0.8rem;">Belum ada anggota resmi.</div>';
+    container.innerHTML = '<div style="color:var(--muted); font-size:0.8rem;">Belum ada anggota resmi terdaftar.</div>';
     return;
   }
-  anggotaList.forEach((member, index) => {
+  
+  // Urutan hierarki agar struktur kelihatan rapi di website
+  const hirarkiOrder = ['head of ems', 'deputy of ems', 'dokter spesialis', 'paramedic', 'emt'];
+  
+  let sortedList = [...anggotaList].sort((a, b) => {
+    let rA = (a['Jabatan'] || 'Emt').toLowerCase();
+    let rB = (b['Jabatan'] || 'Emt').toLowerCase();
+    return hirarkiOrder.indexOf(rA) - hirarkiOrder.indexOf(rB);
+  });
+
+  sortedList.forEach((member, index) => {
     if(!member['Nama Anggota']) return;
-    container.innerHTML += `<div class="team-item"><span>${index + 1}.</span> <strong>${member['Nama Anggota']}</strong></div>`;
+    const rank = member['Jabatan'] || 'Emt';
+    const rankClass = getRankClass(rank);
+    container.innerHTML += `
+      <div class="team-item">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <strong>${member['Nama Anggota']}</strong>
+          <span class="member-badge ${rankClass}" style="font-size:0.65rem;">${rank}</span>
+        </div>
+      </div>`;
   });
 }
 
@@ -193,6 +248,7 @@ function processAndRender() {
   
   const rateTreatment = parseFloat(document.getElementById('priceTreatment').value) || 0;
   const ratePingsan = parseFloat(document.getElementById('pricePingsan').value) || 0;
+  const rateAlprazolam = parseFloat(document.getElementById('priceAlprazolam').value) || 0;
   
   const container = document.getElementById('membersContainer');
   const tbody = document.getElementById('summaryBody');
@@ -217,13 +273,14 @@ function processAndRender() {
       startTime: row['Jam Masuk'],
       endTime: row['Jam Keluar'],
       treatment: parseInt(row['Treatment']) || 0,
-      pingsan: parseInt(row['Pingsan']) || 0
+      pingsan: parseInt(row['Pingsan']) || 0,
+      alprazolam: parseInt(row['Alprazolam']) || 0
     };
   });
 
   const names = Object.keys(grouped);
   if (names.length === 0) {
-    container.innerHTML = '<div style="text-align:center; color:var(--muted); padding:30px; background:var(--surface); border-radius:14px; border:1px solid var(--border);">Tidak ada record absen yang cocok.</div>';
+    container.innerHTML = '<div style="text-align:center; color:var(--muted); padding:30px; background:var(--surface); border-radius:14px; border:1px solid var(--border);">Tidak ada record absen minggu ini.</div>';
     if(mainChart) mainChart.destroy();
     return;
   }
@@ -233,11 +290,11 @@ function processAndRender() {
 
   names.forEach(name => {
     const member = grouped[name];
-    let tHours = 0, tTreat = 0, tPing = 0;
+    let tHours = 0, tTreat = 0, tPing = 0, tAlpra = 0;
     let daysHtml = '';
 
     HARI_URUTAN.forEach(h => {
-      const d = member.days[h] || { startTime: '', endTime: '', treatment: 0, pingsan: 0 };
+      const d = member.days[h] || { startTime: '', endTime: '', treatment: 0, pingsan: 0, alprazolam: 0 };
       
       if(d.startTime && d.endTime) {
         const [sH, sM] = d.startTime.split(':').map(Number);
@@ -245,32 +302,42 @@ function processAndRender() {
         let diff = (eH*60+eM) - (sH*60+sM); if(diff<0) diff+=1440;
         tHours += (diff/60);
       }
-      tTreat += d.treatment; tPing += d.pingsan;
+      tTreat += d.treatment; tPing += d.pingsan; tAlpra += d.alprazolam;
 
       daysHtml += `
         <div class="day-box">
           <div class="day-name">${h}</div>
           <div style="color:#fff; font-family:'DM Mono'; margin-bottom:3px;">${d.startTime || '—'}/${d.endTime || '—'}</div>
-          <div style="color:var(--muted); font-size:0.7rem;">🟢 T:${d.treatment} | 🔴 P:${d.pingsan}</div>
+          <div style="color:var(--muted); font-size:0.65rem; line-height:1.2;">🟢 T:${d.treatment}<br>🔴 P:${d.pingsan}<br>💊 A:${d.alprazolam}</div>
         </div>`;
     });
 
+    const rank = userRanks[member.name] || 'Emt';
+    const rankClass = getRankClass(rank);
+
     const card = document.createElement('div');
     card.className = 'member-card';
-    card.innerHTML = `<div class="member-top">👤 ${member.name}</div><div class="days-grid">${daysHtml}</div>`;
+    card.innerHTML = `
+      <div class="member-top">
+        <span>👤 ${member.name}</span>
+        <span class="member-badge ${rankClass}">${rank}</span>
+      </div>
+      <div class="days-grid">${daysHtml}</div>`;
     container.appendChild(card);
 
-    let income = (tTreat * rateTreatment) + (tPing * ratePingsan);
+    let income = (tTreat * rateTreatment) + (tPing * ratePingsan) + (tAlpra * rateAlprazolam);
     chartLabels.push(member.name);
     chartIncomes.push(income);
 
     tbody.innerHTML += `
-      <tr>
-        <td><strong>${member.name}</strong></td>
+      <tr id="row-${btoa(member.name)}">
+        <td><strong>${member.name}</strong> <span class="member-badge ${rankClass}" style="font-size:0.65rem; padding:2px 4px;">${rank}</span></td>
         <td>${tHours.toFixed(1)} jam</td>
         <td>${tTreat} org</td>
         <td>${tPing} org</td>
+        <td>${tAlpra} botol</td>
         <td style="color:var(--accent); font-weight:bold;">$${income}</td>
+        <td><button class="btn-reset-mini" onclick="resetPerPerson('${member.name}')">❌ Reset</button></td>
       </tr>`;
   });
 
@@ -284,12 +351,12 @@ function renderChart(labels, data) {
     type: 'bar',
     data: {
       labels: labels,
-      datasets: [{ label: 'Income ($)', data: data, backgroundColor: 'rgba(79, 255, 176, 0.3)', borderColor: '#4fffb0', borderWidth: 2, borderRadius: 5 }]
+      datasets: [{ label: 'Total Income ($)', data: data, backgroundColor: 'rgba(79, 255, 176, 0.3)', borderColor: '#4fffb0', borderWidth: 2, borderRadius: 5 }]
     },
     options: { 
       responsive: true, 
       maintainAspectRatio: false, 
-      animation: false, // 🟢 SANGAT PENTING: Mematikan animasi kejut agar grafik batang tidak berkedip melompat
+      animation: false, 
       scales: { 
         y: { grid: { color: '#2a3045' }, ticks: { color: '#6b7490' } }, 
         x: { grid: { display: false }, ticks: { color: '#6b7490' } } 
@@ -299,11 +366,31 @@ function renderChart(labels, data) {
   });
 }
 
+// 🛠️ FUNGSI RESET PER ORANG (Tampilan Web Lokal)
+function resetPerPerson(name) {
+  if(confirm(`Apakah lo yakin ingin mereset & menghapus data minggu ini untuk: ${name}?`)) {
+    // Menghapus data dari array lokal agar langsung hilang di layar
+    rawAbsenData = rawAbsenData.filter(row => !(row['Nama Anggota'] === name && row['Minggu Kontrak'] === document.getElementById('weekStart').value));
+    processAndRender();
+    alert(`Data ${name} berhasil direset di tampilan web! Seterusnya silakan bersihkan baris di Google Sheets agar permanen.`);
+  }
+}
+
+// ⚠️ FUNGSI RESET TOTAL SEMUA ORANG
+function resetAllData() {
+  const week = document.getElementById('weekStart').value;
+  if(confirm(`⚠️ PERINGATAN BESAR!\nApakah lo yakin ingin mereset TOTAL seluruh absen anggota pada minggu: ${week}?`)) {
+    rawAbsenData = rawAbsenData.filter(row => row['Minggu Kontrak'] !== week);
+    processAndRender();
+    alert(`Seluruh data absen minggu ${week} berhasil dibersihkan dari dashboard web!`);
+  }
+}
+
 function exportToExcel() {
   const week = document.getElementById('weekStart').value;
   const table = document.getElementById('reportTable');
   const wb = XLSX.utils.table_to_book(table, { sheet: "Rekap Absensi" });
-  XLSX.writeFile(wb, `Rekap_Absensi_Valoria_Minggu_${week}.xlsx`);
+  XLSX.writeFile(wb, `Rekap_Absensi_EMS_Valoria_Minggu_${week}.xlsx`);
 }
 
 function exportToPDF() {
@@ -312,7 +399,7 @@ function exportToPDF() {
   const week = document.getElementById('weekStart').value;
   
   doc.setFont("Helvetica", "bold");
-  doc.text("LAPORAN ABSENSI & INCOME TIM VALORIA", 14, 15);
+  doc.text("LAPORAN REKAPITULASI JABATAN & INCOME EMS VALORIA", 14, 15);
   doc.setFontSize(10);
   doc.setFont("Helvetica", "normal");
   doc.text(`Periode Kontrak Minggu: ${week}`, 14, 22);
@@ -322,10 +409,10 @@ function exportToPDF() {
     startY: 28,
     theme: 'striped',
     headStyles: { fillColor: [22, 26, 35] },
-    styles: { fontSize: 9 }
+    styles: { fontSize: 8 }
   });
   
-  doc.save(`Rekap_Absensi_Valoria_Minggu_${week}.pdf`);
+  doc.save(`Laporan_EMS_Valoria_Minggu_${week}.pdf`);
 }
 </script>
 </body>
