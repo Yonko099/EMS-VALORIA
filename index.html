@@ -5,17 +5,32 @@
 <title>Sistem Absensi Analytics LIVE GOOGLE SHEETS</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+
 <style>
-:root { --bg: #0d0f14; --surface: #161a23; --surface2: #1e2330; --border: #2a3045; --accent: #4fffb0; --accent4: #74b9ff; --text: #e8eaf0; --muted: #6b7490; }
+:root { --bg: #0d0f14; --surface: #161a23; --surface2: #1e2330; --border: #2a3045; --accent: #4fffb0; --accent4: #74b9ff; --text: #e8eaf0; --muted: #6b7490; --danger: #ff7675; }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; padding: 24px 16px; }
 .header { text-align: center; margin-bottom: 24px; }
 .header h1 { font-size: 2.2rem; background: linear-gradient(135deg,var(--accent),var(--accent4)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800; }
-.control-panel { background: var(--surface); padding: 20px; border-radius: 16px; border: 1px solid var(--border); margin-bottom: 24px; display: flex; gap: 15px; align-items: center; }
-.status-badge { background: rgba(79,255,176,0.1); color: var(--accent); padding: 6px 12px; border-radius: 8px; font-family: 'DM Mono', monospace; font-size: 0.8rem; margin-left: auto; }
+
+.control-panel { background: var(--surface); padding: 20px; border-radius: 16px; border: 1px solid var(--border); margin-bottom: 24px; display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; }
+.control-group { display: flex; flex-direction: column; gap: 5px; }
+.control-group label { font-size: 0.75rem; color: var(--muted); font-weight: 600; }
+.control-input { background: var(--bg); border: 1px solid var(--border); color: #fff; padding: 10px 14px; border-radius: 8px; font-family: 'Syne', sans-serif; font-size: 0.85rem; outline: none; min-width: 200px; }
+.control-input:focus { border-color: var(--accent); }
+.status-badge { background: rgba(79,255,176,0.1); color: var(--accent); padding: 8px 14px; border-radius: 8px; font-family: 'DM Mono', monospace; font-size: 0.8rem; margin-left: auto; align-self: center; }
+
+.btn-group { display: flex; gap: 10px; }
+.btn { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 10px 16px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: all 0.2s; }
+.btn:hover { border-color: var(--accent); background: rgba(79,255,176,0.05); }
+.btn-excel:hover { border-color: #2ecc71; color: #2ecc71; }
+.btn-pdf:hover { border-color: #e74c3c; color: #e74c3c; }
 
 .dashboard-layout { display: grid; grid-template-columns: 1fr 300px; gap: 24px; }
-@media (max-width: 900px) { .dashboard-layout { grid-template-columns: 1fr; } }
+@media (max-width: 1000px) { .dashboard-layout { grid-template-columns: 1fr; } }
 .member-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; margin-bottom: 14px; padding: 15px; }
 .member-top { display: flex; align-items: center; gap: 10px; font-weight: 700; margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 8px; color: #fff; }
 .days-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
@@ -39,10 +54,24 @@ body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-seri
 </div>
 
 <div class="control-panel">
-  <div style="display:flex; flex-direction:column; gap:5px;">
-    <label style="font-size:0.75rem; color:var(--muted)">PILIH MINGGU REKAP:</label>
-    <input type="date" id="weekStart" style="background:var(--bg); border:1px solid var(--border); color:#fff; padding:8px; border-radius:6px; font-family: 'DM Mono', monospace;" onchange="fetchGoogleSheetsData()">
+  <div class="control-group">
+    <label>PILIH MINGGU REKAP:</label>
+    <input type="date" id="weekStart" class="control-input" style="font-family: 'DM Mono', monospace;" onchange="processAndRender()">
   </div>
+  
+  <div class="control-group">
+    <label>CARI NAMA ANGGOTA:</label>
+    <input type="text" id="searchName" class="control-input" placeholder="Ketik nama tim..." oninput="processAndRender()">
+  </div>
+
+  <div class="control-group">
+    <label>EXPORT DATA REKAPAN MINGGU INI:</label>
+    <div class="btn-group">
+      <button class="btn btn-excel" onclick="exportToExcel()">📊 Export Excel</button>
+      <button class="btn btn-pdf" onclick="exportToPDF()">📑 Cetak PDF</button>
+    </div>
+  </div>
+
   <div class="status-badge" id="syncStatus">🔄 Menghubungkan...</div>
 </div>
 
@@ -50,7 +79,7 @@ body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-seri
   <div>
     <div id="membersContainer"></div>
 
-    <table class="summary-table">
+    <table class="summary-table" id="reportTable">
       <thead>
         <tr><th>Nama Anggota</th><th>Total Jam</th><th>Treatment</th><th>Pingsan</th><th>Alprazolam</th><th>Total Income</th></tr>
       </thead>
@@ -69,17 +98,18 @@ body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-seri
 </div>
 
 <script>
-// LINK CSV ASLI DATABASE VALORIA MILIK ZHAGI
 const CSV_ABSEN_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQdcWhromy0EiLziCHqBFVXGEerb4FFwdOy2pq7LPus9z5fet0tHJFzmC_xvWxh96MzRIPOWWtJa3Jm/pub?gid=0&single=true&output=csv';
 const CSV_ANGGOTA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQdcWhromy0EiLziCHqBFVXGEerb4FFwdOy2pq7LPus9z5fet0tHJFzmC_xvWxh96MzRIPOWWtJa3Jm/pub?gid=422470466&single=true&output=csv';
 
+let rawAbsenData = [];
+let rawAnggotaData = [];
 let mainChart = null;
 
 window.addEventListener('load', () => {
   const sun = new Date(); sun.setDate(sun.getDate() - sun.getDay());
   document.getElementById('weekStart').value = sun.toISOString().split('T')[0];
   fetchGoogleSheetsData();
-  setInterval(fetchGoogleSheetsData, 5000); // Sinkronisasi otomatis tiap 5 detik!
+  setInterval(fetchGoogleSheetsData, 5000); // Sinkronisasi otomatis tiap 5 detik
 });
 
 function fetchGoogleSheetsData() {
@@ -88,18 +118,19 @@ function fetchGoogleSheetsData() {
     fetch(CSV_ANGGOTA_URL).then(res => res.text())
   ])
   .then(([csvAbsen, csvAnggota]) => {
-    const parsedAbsen = parseCSV(csvAbsen);
-    const parsedAnggota = parseCSV(csvAnggota);
+    rawAbsenData = parseCSV(csvAbsen);
+    rawAnggotaData = parseCSV(csvAnggota);
     
-    renderTeamList(parsedAnggota);
-    renderDashboard(parsedAbsen);
+    renderTeamList(rawAnggotaData);
+    processAndRender();
+    
     document.getElementById('syncStatus').innerText = "🟢 Terhubung ke Google Cloud";
     document.getElementById('syncStatus').style.color = "var(--accent)";
   })
   .catch(err => {
     console.error("Eror sinkronisasi data:", err);
     document.getElementById('syncStatus').innerText = "🔴 Sinkronisasi Terputus";
-    document.getElementById('syncStatus').style.color = "#ff7675";
+    document.getElementById('syncStatus').style.color = "var(--danger)";
   });
 }
 
@@ -132,17 +163,26 @@ function renderTeamList(anggotaList) {
   });
 }
 
-function renderDashboard(dataList) {
+// FUNGSI UTAMA UNTUK FILTER MINGGU & SEARCH NAMA SECARA REALTIME
+function processAndRender() {
   const selectedWeek = document.getElementById('weekStart').value;
+  const searchQuery = document.getElementById('searchName').value.toLowerCase().trim();
+  
   const container = document.getElementById('membersContainer');
   const tbody = document.getElementById('summaryBody');
   
   container.innerHTML = '';
   tbody.innerHTML = '';
   
-  const filtered = dataList.filter(row => row['Minggu Kontrak'] === selectedWeek);
-  const grouped = {};
+  // Filter berdasarkan Minggu Kontrak
+  let filtered = rawAbsenData.filter(row => row['Minggu Kontrak'] === selectedWeek);
   
+  // Filter berdasarkan Search Nama Anggota
+  if(searchQuery !== '') {
+    filtered = filtered.filter(row => row['Nama Anggota'] && row['Nama Anggota'].toLowerCase().includes(searchQuery));
+  }
+  
+  const grouped = {};
   filtered.forEach(row => {
     const name = row['Nama Anggota'];
     if(!name) return;
@@ -160,7 +200,7 @@ function renderDashboard(dataList) {
 
   const names = Object.keys(grouped);
   if (names.length === 0) {
-    container.innerHTML = '<div style="text-align:center; color:var(--muted); padding:30px; background:var(--surface); border-radius:14px; border:1px solid var(--border);">Tidak ada data atau record absen untuk minggu kontrak ini.</div>';
+    container.innerHTML = '<div style="text-align:center; color:var(--muted); padding:30px; background:var(--surface); border-radius:14px; border:1px solid var(--border);">Tidak ada record absen yang cocok.</div>';
     if(mainChart) mainChart.destroy();
     return;
   }
@@ -226,6 +266,37 @@ function renderChart(labels, data) {
     },
     options: { responsive: true, maintainAspectRatio: false, scales: { y: { grid: { color: '#2a3045' }, ticks: { color: '#6b7490' } }, x: { grid: { display: false }, ticks: { color: '#6b7490' } } }, plugins: { legend: { labels: { color: '#e8eaf0', font: { family: 'Syne' } } } } }
   });
+}
+
+// FITUR CONVERT: CONVERT TABEL KE EXCEL (.XLSX)
+function exportToExcel() {
+  const week = document.getElementById('weekStart').value;
+  const table = document.getElementById('reportTable');
+  const wb = XLSX.utils.table_to_book(table, { sheet: "Rekap Absensi" });
+  XLSX.writeFile(wb, `Rekap_Absensi_Valoria_Minggu_${week}.xlsx`);
+}
+
+// FITUR CONVERT: CONVERT TABEL KE PDF (.PDF)
+function exportToPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const week = document.getElementById('weekStart').value;
+  
+  doc.setFont("Helvetica", "bold");
+  doc.text("LAPORAN ABSENSI & INCOME TIM VALORIA", 14, 15);
+  doc.setFontSize(10);
+  doc.setFont("Helvetica", "normal");
+  doc.text(`Periode Kontrak Minggu: ${week}`, 14, 22);
+  
+  doc.autoTable({
+    html: '#reportTable',
+    startY: 28,
+    theme: 'striped',
+    headStyles: { fillColor: [22, 26, 35] },
+    styles: { fontSize: 9 }
+  });
+  
+  doc.save(`Rekap_Absensi_Valoria_Minggu_${week}.pdf`);
 }
 </script>
 </body>
