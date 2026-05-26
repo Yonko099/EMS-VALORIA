@@ -347,20 +347,31 @@ function processAndRender() {
   const selectedWeek = document.getElementById('weekStart').value;
   const searchQuery = document.getElementById('searchName').value.toLowerCase().trim();
   
-  // 💾 Ambil paksa isi ketikan terakhir di kotak layar saat ini
+  // 💾 1. Ambil angka yang sedang tertulis di kotak layar saat ini
   let currentTreat = document.getElementById('priceTreatment').value;
   let currentPing = document.getElementById('pricePingsan').value;
   let currentAlpra = document.getElementById('priceAlprazolam').value;
 
-  // 🔒 TITIPKAN KE MEMORI CACHE HARD DRIVE BROWSER
-  if(currentTreat !== '') localStorage.setItem('zhagi_treat', currentTreat);
-  if(currentPing !== '') localStorage.setItem('zhagi_ping', currentPing);
-  if(currentAlpra !== '') localStorage.setItem('zhagi_alpra', currentAlpra);
+  // 🔒 2. Hanya update memori JIKA Zhagi sedang fokus ngetik sendiri (bukan pemicu auto-refresh background)
+  if (document.activeElement === document.getElementById('priceTreatment') && currentTreat !== '') {
+    localStorage.setItem('zhagi_treat', currentTreat);
+  }
+  if (document.activeElement === document.getElementById('pricePingsan') && currentPing !== '') {
+    localStorage.setItem('zhagi_ping', currentPing);
+  }
+  if (document.activeElement === document.getElementById('priceAlprazolam') && currentAlpra !== '') {
+    localStorage.setItem('zhagi_alpra', currentAlpra);
+  }
 
-  // Setel pengali kalkulator internal tabel
-  const rateTreatment = currentTreat !== '' ? parseFloat(currentTreat) : 35;
-  const ratePingsan = currentPing !== '' ? parseFloat(currentPing) : 45;
-  const rateAlprazolam = currentAlpra !== '' ? parseFloat(currentAlpra) : 50;
+  // 🧠 3. AMBIL DATA PRIORITAS: Cek memori browser, kalau kosong melompong baru balik ke default awal
+  const rateTreatment = localStorage.getItem('zhagi_treat') ? parseFloat(localStorage.getItem('zhagi_treat')) : 35;
+  const ratePingsan = localStorage.getItem('zhagi_ping') ? parseFloat(localStorage.getItem('zhagi_ping')) : 45;
+  const rateAlprazolam = localStorage.getItem('zhagi_alpra') ? parseFloat(localStorage.getItem('zhagi_alpra')) : 50;
+
+  // 👑 4. KUNCI PAKSA BALIK KE ELEMEN LAYAR (Biar kotak input gak bisa di-overwrite sepihak pas render data)
+  document.getElementById('priceTreatment').value = rateTreatment;
+  document.getElementById('pricePingsan').value = ratePingsan;
+  document.getElementById('priceAlprazolam').value = rateAlprazolam;
   
   const container = document.getElementById('membersContainer');
   const tbody = document.getElementById('summaryBody');
