@@ -357,7 +357,7 @@ function processAndRender() {
   const selectedWeek = document.getElementById('weekStart').value;
   const searchQuery = document.getElementById('searchName').value.toLowerCase().trim();
   
-  // 🔒 SISTEM PENGUNCI ELEMEN KETIKAN ZHAGI (ANTI-MENTAL BALIK)
+  // 🔒 SISTEM PENGUNCI ELEMEN KETIKAN ZHAGI (SINKRON VARIABEL 100% BEBAS EROR TYPO)
   let priceTreatInput = document.getElementById('priceTreatment').value;
   let pricePingInput = document.getElementById('pricePingsan').value;
   let priceAlpraInput = document.getElementById('priceAlprazolam').value;
@@ -366,7 +366,7 @@ function processAndRender() {
   const ratePingsan = pricePingInput !== '' ? parseFloat(pricePingInput) : 45;
   const rateAlprazolam = priceAlpraInput !== '' ? parseFloat(priceAlpraInput) : 50;
 
-  // Pertahankan angka di kotak agar tidak ditimpa oleh default HTML pas render ulang
+  // Kunci paksa nilainya ke element HTML layar biar ga keriset pas auto-sync berjalan
   document.getElementById('priceTreatment').value = rateTreatment;
   document.getElementById('pricePingsan').value = ratePingsan;
   document.getElementById('priceAlprazolam').value = rateAlprazolam;
@@ -383,7 +383,6 @@ function processAndRender() {
     filtered = filtered.filter(row => row['Nama Anggota'] && row['Nama Anggota'].toLowerCase().includes(searchQuery));
   }
   
-  // LOGIKA MULTI-ENTRY: Mengelompokkan data per nama, lalu per hari (bisa muat banyak baris sekaligus)
   const grouped = {};
   filtered.forEach(row => {
     const name = row['Nama Anggota'];
@@ -438,7 +437,6 @@ function processAndRender() {
       let dayHours = 0, dayTreat = 0, dayPing = 0, dayAlpra = 0;
       let timeRangesText = [];
 
-      // Akumulasikan semua baris data di hari yang sama ke penampung lokal
       records.forEach(d => {
         if(d.startTime && d.endTime) {
           const [sH, sM] = d.startTime.split(':').map(Number);
