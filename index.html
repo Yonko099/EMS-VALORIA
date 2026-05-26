@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Sistem Absensi Analytics LIVE GOOGLE SHEETS</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root { --bg: #0d0f14; --surface: #161a23; --surface2: #1e2330; --border: #2a3045; --accent: #4fffb0; --accent4: #74b9ff; --text: #e8eaf0; --muted: #6b7490; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; padding: 24px 16px; }
+.header { text-align: center; margin-bottom: 24px; }
+.header h1 { font-size: 2.2rem; background: linear-gradient(135deg,var(--accent),var(--accent4)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800; }
+.control-panel { background: var(--surface); padding: 20px; border-radius: 16px; border: 1px solid var(--border); margin-bottom: 24px; display: flex; gap: 15px; align-items: center; }
+.status-badge { background: rgba(79,255,176,0.1); color: var(--accent); padding: 6px 12px; border-radius: 8px; font-family: 'DM Mono', monospace; font-size: 0.8rem; margin-left: auto; }
+
+.dashboard-layout { display: grid; grid-template-columns: 1fr 300px; gap: 24px; }
+@media (max-width: 900px) { .dashboard-layout { grid-template-columns: 1fr; } }
+.member-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; margin-bottom: 14px; padding: 15px; }
+.member-top { display: flex; align-items: center; gap: 10px; font-weight: 700; margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 8px; color: #fff; }
+.days-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
+.day-box { background: var(--surface2); padding: 8px; border-radius: 8px; font-size: 0.75rem; border: 1px solid rgba(42,48,69,0.5); }
+.day-name { color: var(--accent4); font-weight: bold; margin-bottom: 4px; }
+.summary-table { width: 100%; border-collapse: collapse; margin-top: 24px; background: var(--surface); border-radius: 12px; overflow: hidden; border: 1px solid var(--border); }
+.summary-table th, .summary-table td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+.summary-table th { background: var(--surface2); color: var(--muted); font-weight: 600; }
+.chart-section { background: var(--surface); padding: 20px; border-radius: 16px; border: 1px solid var(--border); margin-top: 24px; height: 320px; }
+.sidebar-panel { background: var(--surface); padding: 20px; border-radius: 16px; border: 1px solid var(--border); height: fit-content; }
+.sidebar-title { font-size: 1rem; font-weight: 700; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 8px; color: var(--accent4); }
+.team-list { display: flex; flex-direction: column; gap: 8px; font-size: 0.85rem; }
+.team-item { background: var(--surface2); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(42,48,69,0.3); display: flex; align-items: center; gap: 8px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>⚡ Dashboard Absensi Cloud Valoria</h1>
+  <p style="color: var(--muted); font-size: 0.85rem; margin-top: 5px; font-family: 'DM Mono', monospace;">REAL-TIME COLLABORATION VIA GOOGLE SHEETS LIVE SYNC</p>
+</div>
+
+<div class="control-panel">
+  <div style="display:flex; flex-direction:column; gap:5px;">
+    <label style="font-size:0.75rem; color:var(--muted)">PILIH MINGGU REKAP:</label>
+    <input type="date" id="weekStart" style="background:var(--bg); border:1px solid var(--border); color:#fff; padding:8px; border-radius:6px; font-family: 'DM Mono', monospace;" onchange="fetchGoogleSheetsData()">
+  </div>
+  <div class="status-badge" id="syncStatus">🔄 Menghubungkan...</div>
+</div>
+
+<div class="dashboard-layout">
+  <div>
+    <div id="membersContainer"></div>
+
+    <table class="summary-table">
+      <thead>
+        <tr><th>Nama Anggota</th><th>Total Jam</th><th>Treatment</th><th>Pingsan</th><th>Alprazolam</th><th>Total Income</th></tr>
+      </thead>
+      <tbody id="summaryBody"></tbody>
+    </table>
+
+    <div class="chart-section"><canvas id="analyticsChart"></canvas></div>
+  </div>
+
+  <div class="sidebar-panel">
+    <div class="sidebar-title">📋 Anggota Resmi Terdaftar</div>
+    <div id="teamListContainer" class="team-list">
+      <div style="color:var(--muted); font-size:0.8rem; text-align:center;">Memuat daftar tim...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// LINK CSV ASLI DATABASE VALORIA MILIK ZHAGI
+const CSV_ABSEN_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQdcWhromy0EiLziCHqBFVXGEerb4FFwdOy2pq7LPus9z5fet0tHJFzmC_xvWxh96MzRIPOWWtJa3Jm/pub?gid=0&single=true&output=csv';
+const CSV_ANGGOTA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQdcWhromy0EiLziCHqBFVXGEerb4FFwdOy2pq7LPus9z5fet0tHJFzmC_xvWxh96MzRIPOWWtJa3Jm/pub?gid=422470466&single=true&output=csv';
+
+let mainChart = null;
+
+window.addEventListener('load', () => {
+  const sun = new Date(); sun.setDate(sun.getDate() - sun.getDay());
+  document.getElementById('weekStart').value = sun.toISOString().split('T')[0];
+  fetchGoogleSheetsData();
+  setInterval(fetchGoogleSheetsData, 5000); // Sinkronisasi otomatis tiap 5 detik!
+});
+
+function fetchGoogleSheetsData() {
+  Promise.all([
+    fetch(CSV_ABSEN_URL).then(res => res.text()),
+    fetch(CSV_ANGGOTA_URL).then(res => res.text())
+  ])
+  .then(([csvAbsen, csvAnggota]) => {
+    const parsedAbsen = parseCSV(csvAbsen);
+    const parsedAnggota = parseCSV(csvAnggota);
+    
+    renderTeamList(parsedAnggota);
+    renderDashboard(parsedAbsen);
+    document.getElementById('syncStatus').innerText = "🟢 Terhubung ke Google Cloud";
+    document.getElementById('syncStatus').style.color = "var(--accent)";
+  })
+  .catch(err => {
+    console.error("Eror sinkronisasi data:", err);
+    document.getElementById('syncStatus').innerText = "🔴 Sinkronisasi Terputus";
+    document.getElementById('syncStatus').style.color = "#ff7675";
+  });
+}
+
+function parseCSV(text) {
+  const lines = text.split('\n').map(line => line.split(','));
+  const headers = lines[0].map(h => h.trim().replace(/"/g, ''));
+  const result = [];
+  
+  for(let i=1; i<lines.length; i++) {
+    if(!lines[i] || lines[i].length < headers.length) continue;
+    const obj = {};
+    headers.forEach((header, index) => {
+      obj[header] = lines[i][index] ? lines[i][index].trim().replace(/"/g, '') : '';
+    });
+    if(Object.values(obj).some(v => v !== '')) result.push(obj);
+  }
+  return result;
+}
+
+function renderTeamList(anggotaList) {
+  const container = document.getElementById('teamListContainer');
+  container.innerHTML = '';
+  if(anggotaList.length === 0) {
+    container.innerHTML = '<div style="color:var(--muted); font-size:0.8rem;">Belum ada anggota resmi.</div>';
+    return;
+  }
+  anggotaList.forEach((member, index) => {
+    if(!member['Nama Anggota']) return;
+    container.innerHTML += `<div class="team-item"><span>${index + 1}.</span> <strong>${member['Nama Anggota']}</strong></div>`;
+  });
+}
+
+function renderDashboard(dataList) {
+  const selectedWeek = document.getElementById('weekStart').value;
+  const container = document.getElementById('membersContainer');
+  const tbody = document.getElementById('summaryBody');
+  
+  container.innerHTML = '';
+  tbody.innerHTML = '';
+  
+  const filtered = dataList.filter(row => row['Minggu Kontrak'] === selectedWeek);
+  const grouped = {};
+  
+  filtered.forEach(row => {
+    const name = row['Nama Anggota'];
+    if(!name) return;
+    if(!grouped[name]) {
+      grouped[name] = { name: name, days: {} };
+    }
+    grouped[name].days[row['Hari']] = {
+      startTime: row['Jam Masuk'],
+      endTime: row['Jam Keluar'],
+      treatment: parseInt(row['Treatment']) || 0,
+      pingsan: parseInt(row['Pingsan']) || 0,
+      alpra: parseInt(row['Alprazolam']) || 0
+    };
+  });
+
+  const names = Object.keys(grouped);
+  if (names.length === 0) {
+    container.innerHTML = '<div style="text-align:center; color:var(--muted); padding:30px; background:var(--surface); border-radius:14px; border:1px solid var(--border);">Tidak ada data atau record absen untuk minggu kontrak ini.</div>';
+    if(mainChart) mainChart.destroy();
+    return;
+  }
+
+  let chartLabels = [], chartIncomes = [];
+  const HARI_URUTAN = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+
+  names.forEach(name => {
+    const member = grouped[name];
+    let tHours = 0, tTreat = 0, tPing = 0, tAlpra = 0;
+    let daysHtml = '';
+
+    HARI_URUTAN.forEach(h => {
+      const d = member.days[h] || { startTime: '', endTime: '', treatment: 0, pingsan: 0, alpra: 0 };
+      
+      if(d.startTime && d.endTime) {
+        const [sH, sM] = d.startTime.split(':').map(Number);
+        const [eH, eM] = d.endTime.split(':').map(Number);
+        let diff = (eH*60+eM) - (sH*60+sM); if(diff<0) diff+=1440;
+        tHours += (diff/60);
+      }
+      tTreat += d.treatment; tPing += d.pingsan; tAlpra += d.alpra;
+
+      daysHtml += `
+        <div class="day-box">
+          <div class="day-name">${h}</div>
+          <div style="color:#fff; font-family:'DM Mono'; margin-bottom:3px;">${d.startTime || '—'}/${d.endTime || '—'}</div>
+          <div style="color:var(--muted); font-size:0.7rem;">🟢 T:${d.treatment} | 🔴 P:${d.pingsan}</div>
+        </div>`;
+    });
+
+    const card = document.createElement('div');
+    card.className = 'member-card';
+    card.innerHTML = `<div class="member-top">👤 ${member.name}</div><div class="days-grid">${daysHtml}</div>`;
+    container.appendChild(card);
+
+    let income = (tTreat * 35) + (tPing * 45) + (tAlpra * 15);
+    chartLabels.push(member.name);
+    chartIncomes.push(income);
+
+    tbody.innerHTML += `
+      <tr>
+        <td><strong>${member.name}</strong></td>
+        <td>${tHours.toFixed(1)} jam</td>
+        <td>${tTreat} org</td>
+        <td>${tPing} org</td>
+        <td>${tAlpra} pcs</td>
+        <td style="color:var(--accent); font-weight:bold;">$${income}</td>
+      </tr>`;
+  });
+
+  renderChart(chartLabels, chartIncomes);
+}
+
+function renderChart(labels, data) {
+  const ctx = document.getElementById('analyticsChart').getContext('2d');
+  if (mainChart) mainChart.destroy();
+  mainChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{ label: 'Income ($)', data: data, backgroundColor: 'rgba(79, 255, 176, 0.3)', borderColor: '#4fffb0', borderWidth: 2, borderRadius: 5 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, scales: { y: { grid: { color: '#2a3045' }, ticks: { color: '#6b7490' } }, x: { grid: { display: false }, ticks: { color: '#6b7490' } } }, plugins: { legend: { labels: { color: '#e8eaf0', font: { family: 'Syne' } } } } }
+  });
+}
+</script>
+</body>
+</html>
