@@ -357,7 +357,7 @@ function processAndRender() {
   const selectedWeek = document.getElementById('weekStart').value;
   const searchQuery = document.getElementById('searchName').value.toLowerCase().trim();
   
-  // 🔥 LOGIKA SAKTI PENGUNCI HARGA: Mengambil ketikan terakhir user, kalau dikosongkan baru pakai default bawaan
+  // 🔒 SISTEM PENGUNCI ELEMEN KETIKAN ZHAGI (ANTI-MENTAL BALIK)
   let priceTreatInput = document.getElementById('priceTreatment').value;
   let pricePingInput = document.getElementById('pricePingsan').value;
   let priceAlpraInput = document.getElementById('priceAlprazolam').value;
@@ -365,6 +365,11 @@ function processAndRender() {
   const rateTreatment = priceTreatInput !== '' ? parseFloat(priceTreatInput) : 35;
   const ratePingsan = pricePingInput !== '' ? parseFloat(pricePingInput) : 45;
   const rateAlprazolam = priceAlpraInput !== '' ? parseFloat(priceAlpraInput) : 50;
+
+  // Pertahankan angka di kotak agar tidak ditimpa oleh default HTML pas render ulang
+  document.getElementById('priceTreatment').value = rateTreatment;
+  document.getElementById('pricePingsan').value = ratePingsan;
+  document.getElementById('priceAlprazolam').value = rateAlprazolam;
   
   const container = document.getElementById('membersContainer');
   const tbody = document.getElementById('summaryBody');
