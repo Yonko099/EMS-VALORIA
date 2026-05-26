@@ -357,9 +357,14 @@ function processAndRender() {
   const selectedWeek = document.getElementById('weekStart').value;
   const searchQuery = document.getElementById('searchName').value.toLowerCase().trim();
   
-  const rateTreatment = parseFloat(document.getElementById('priceTreatment').value) || 0;
-  const ratePingsan = parseFloat(document.getElementById('pricePingsan').value) || 0;
-  const rateAlprazolam = parseFloat(document.getElementById('priceAlprazolam').value) || 0;
+  // 🔥 LOGIKA SAKTI PENGUNCI HARGA: Mengambil ketikan terakhir user, kalau dikosongkan baru pakai default bawaan
+  let priceTreatInput = document.getElementById('priceTreatment').value;
+  let pricePingInput = document.getElementById('pricePingsan').value;
+  let priceAlpraInput = document.getElementById('priceAlprazolam').value;
+
+  const rateTreatment = priceTreatInput !== '' ? parseFloat(priceTreatInput) : 35;
+  const ratePingsan = pricePingInput !== '' ? parseFloat(pricePingInput) : 45;
+  const rateAlprazolam = priceAlpraInput !== '' ? parseFloat(priceAlpraInput) : 50;
   
   const container = document.getElementById('membersContainer');
   const tbody = document.getElementById('summaryBody');
