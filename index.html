@@ -173,18 +173,23 @@ let lastFetchedAnggotaRaw = "";
 let mainChart = null;
 let userRanks = {};
 
+// 🧠 INJEKSI LOKAL BADAK: Muat isi ketikan terakhir pas pertama kali web dibuka
 window.addEventListener('load', () => {
   const sun = new Date(); sun.setDate(sun.getDate() - sun.getDay());
   document.getElementById('weekStart').value = sun.toISOString().split('T')[0];
+  
+  if(localStorage.getItem('zhagi_treat')) document.getElementById('priceTreatment').value = localStorage.getItem('zhagi_treat');
+  if(localStorage.getItem('zhagi_ping')) document.getElementById('pricePingsan').value = localStorage.getItem('zhagi_ping');
+  if(localStorage.getItem('zhagi_alpra')) document.getElementById('priceAlprazolam').value = localStorage.getItem('zhagi_alpra');
+
   fetchGoogleSheetsData(true); 
-  setInterval(() => fetchGoogleSheetsData(false), 15000); // Auto sync mulus tiap 15 detik
+  setInterval(() => fetchGoogleSheetsData(false), 15000); 
 });
 
 function toggleCustomRankInput() {
   document.getElementById('customRankGroup').style.display = (document.getElementById('selectRank').value === 'KUSTOM') ? 'flex' : 'none';
 }
 
-// ☁️ CLOUD ACTION 1: SIMPAN/UPDATE JABATAN BARU
 function addMemberToCloud() {
   const nama = document.getElementById('newMemberName').value.trim();
   const selectVal = document.getElementById('selectRank').value;
@@ -207,7 +212,6 @@ function addMemberToCloud() {
   }).catch(e => alert('Gagal memproses ke server cloud: ' + e));
 }
 
-// ☁️ CLOUD ACTION 2: RESET PER ORANG DI MINGGU TERPILIH
 function resetPerPersonFromCloud(name) {
   const week = document.getElementById('weekStart').value;
   if(!confirm(`Hapus permanen seluruh data baris absen ${name} pada minggu ${week} langsung di Google Sheets?`)) return;
@@ -224,7 +228,6 @@ function resetPerPersonFromCloud(name) {
   });
 }
 
-// ☁️ CLOUD ACTION 3: RESET MASSAL TOTAL SATU MINGGU PENUH
 function resetAllDataFromCloud() {
   const week = document.getElementById('weekStart').value;
   if(!confirm(`⚠️ WARNING SEGERA!\nApakah lo yakin ingin MENGHAPUS TOTAL seluruh baris data absen minggu ${week} langsung dari server Google Sheets?`)) return;
@@ -314,28 +317,15 @@ function renderTeamList(anggotaList) {
     return;
   }
   
-  // 📋 SUSUNAN HIERARKI MUTLAK VALORIA (1 SAMPAI 6)
-  const hirarkiOrder = [
-    'head of ems',
-    'deputy of ems',
-    'secretariat',
-    'dokter',
-    'dokter spesialis',
-    'pmd',
-    'paramedic',
-    'emt'
-  ];
+  const hirarkiOrder = ['head of ems', 'deputy of ems', 'secretariat', 'dokter', 'dokter spesialis', 'pmd', 'paramedic', 'emt'];
   
   let sortedList = [...anggotaList].sort((a, b) => {
     let rA = (a['Jabatan'] || 'EMT').toLowerCase().trim();
     let rB = (b['Jabatan'] || 'EMT').toLowerCase().trim();
-    
     let idxA = hirarkiOrder.indexOf(rA);
     let idxB = hirarkiOrder.indexOf(rB);
-    
     if (idxA === -1) idxA = 999;
     if (idxB === -1) idxB = 999;
-    
     return idxA - idxB;
   });
 
@@ -357,19 +347,20 @@ function processAndRender() {
   const selectedWeek = document.getElementById('weekStart').value;
   const searchQuery = document.getElementById('searchName').value.toLowerCase().trim();
   
-  // 🔒 SISTEM PENGUNCI ELEMEN KETIKAN ZHAGI (SINKRON VARIABEL 100% BEBAS EROR TYPO)
-  let priceTreatInput = document.getElementById('priceTreatment').value;
-  let pricePingInput = document.getElementById('pricePingsan').value;
-  let priceAlpraInput = document.getElementById('priceAlprazolam').value;
+  // 💾 Ambil paksa isi ketikan terakhir di kotak layar saat ini
+  let currentTreat = document.getElementById('priceTreatment').value;
+  let currentPing = document.getElementById('pricePingsan').value;
+  let currentAlpra = document.getElementById('priceAlprazolam').value;
 
-  const rateTreatment = priceTreatInput !== '' ? parseFloat(priceTreatInput) : 35;
-  const ratePingsan = pricePingInput !== '' ? parseFloat(pricePingInput) : 45;
-  const rateAlprazolam = priceAlpraInput !== '' ? parseFloat(priceAlpraInput) : 50;
+  // 🔒 TITIPKAN KE MEMORI CACHE HARD DRIVE BROWSER
+  if(currentTreat !== '') localStorage.setItem('zhagi_treat', currentTreat);
+  if(currentPing !== '') localStorage.setItem('zhagi_ping', currentPing);
+  if(currentAlpra !== '') localStorage.setItem('zhagi_alpra', currentAlpra);
 
-  // Kunci paksa nilainya ke element HTML layar biar ga keriset pas auto-sync berjalan
-  document.getElementById('priceTreatment').value = rateTreatment;
-  document.getElementById('pricePingsan').value = ratePingsan;
-  document.getElementById('priceAlprazolam').value = rateAlprazolam;
+  // Setel pengali kalkulator internal tabel
+  const rateTreatment = currentTreat !== '' ? parseFloat(currentTreat) : 35;
+  const ratePingsan = currentPing !== '' ? parseFloat(currentPing) : 45;
+  const rateAlprazolam = currentAlpra !== '' ? parseFloat(currentAlpra) : 50;
   
   const container = document.getElementById('membersContainer');
   const tbody = document.getElementById('summaryBody');
@@ -378,7 +369,6 @@ function processAndRender() {
   tbody.innerHTML = '';
   
   let filtered = rawAbsenData.filter(row => row['Minggu Kontrak'] === selectedWeek);
-  
   if(searchQuery !== '') {
     filtered = filtered.filter(row => row['Nama Anggota'] && row['Nama Anggota'].toLowerCase().includes(searchQuery));
   }
@@ -387,15 +377,10 @@ function processAndRender() {
   filtered.forEach(row => {
     const name = row['Nama Anggota'];
     if(!name) return;
-    
-    if(!grouped[name]) {
-      grouped[name] = { name: name, days: {} };
-    }
+    if(!grouped[name]) grouped[name] = { name: name, days: {} };
     
     const hari = row['Hari'];
-    if(!grouped[name].days[hari]) {
-      grouped[name].days[hari] = [];
-    }
+    if(!grouped[name].days[hari]) grouped[name].days[hari] = [];
     
     grouped[name].days[hari].push({
       startTime: row['Jam Masuk'],
@@ -423,7 +408,6 @@ function processAndRender() {
 
     HARI_URUTAN.forEach(h => {
       const records = member.days[h] || [];
-      
       if(records.length === 0) {
         daysHtml += `
           <div class="day-box">
@@ -448,18 +432,13 @@ function processAndRender() {
         dayTreat += d.treatment;
         dayPing += d.pingsan;
         dayAlpra += d.alprazolam;
-        
         tTreat += d.treatment;
         tPing += d.pingsan;
         tAlpra += d.alprazolam;
-
-        if(d.startTime && d.endTime) {
-          timeRangesText.push(`${d.startTime}-${d.endTime}`);
-        }
+        if(d.startTime && d.endTime) timeRangesText.push(`${d.startTime}-${d.endTime}`);
       });
 
       let finalTimeText = timeRangesText.length > 0 ? timeRangesText.join('<br>') : '—/—';
-
       daysHtml += `
         <div class="day-box">
           <div class="day-name">${h}</div>
