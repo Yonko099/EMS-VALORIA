@@ -16,7 +16,8 @@ body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-seri
 .header { text-align: center; margin-bottom: 24px; }
 .header h1 { font-size: 2.2rem; background: linear-gradient(135deg,var(--accent),var(--accent4)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800; }
 
-.control-panel { background: var(--surface); padding: 20px; border-radius: 16px; border: 1px solid var(--border); margin-bottom: 24px; display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; }
+.control-panel, .management-panel { background: var(--surface); padding: 20px; border-radius: 16px; border: 1px solid var(--border); margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; }
+.management-panel { border-color: var(--accent4); background: linear-gradient(180deg, var(--surface) 0%, rgba(116,185,255,0.03) 100%); }
 .control-group { display: flex; flex-direction: column; gap: 5px; }
 .control-group label { font-size: 0.75rem; color: var(--muted); font-weight: 600; }
 .control-input { background: var(--bg); border: 1px solid var(--border); color: #fff; padding: 10px 14px; border-radius: 8px; font-family: 'Syne', sans-serif; font-size: 0.85rem; outline: none; min-width: 140px; }
@@ -26,10 +27,12 @@ body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-seri
 .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
 .btn { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 10px 14px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 6px; transition: all 0.2s; }
 .btn:hover { border-color: var(--accent); background: rgba(79,255,176,0.05); }
+.btn-primary { border-color: var(--accent4); color: var(--accent4); }
+.btn-primary:hover { background: rgba(116,185,255,0.1); }
 .btn-excel:hover { border-color: #2ecc71; color: #2ecc71; }
 .btn-pdf:hover { border-color: #e74c3c; color: #e74c3c; }
 .btn-danger { border-color: var(--danger); color: var(--danger); }
-.btn-danger:hover { background: rgba(255,118,117,0.1); border-color: #d63031; }
+.btn-danger:hover { background: rgba(255,118,117,0.1); }
 .btn-reset-mini { padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; background: rgba(255,118,117,0.1); border: 1px solid var(--danger); color: var(--danger); cursor: pointer; }
 .btn-reset-mini:hover { background: var(--danger); color: #fff; }
 
@@ -67,7 +70,32 @@ body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-seri
 
 <div class="header">
   <h1>⚡ Dashboard Absensi Cloud Valoria</h1>
-  <p style="color: var(--muted); font-size: 0.85rem; margin-top: 5px; font-family: 'DM Mono', monospace;">REKAP & STRUKTUR MANAGEMENT EMS VALORIA SYSTEM</p>
+  <p style="color: var(--muted); font-size: 0.85rem; margin-top: 5px; font-family: 'DM Mono', monospace;">REKAP, RESET & MANAGEMENT STRUKTUR CLOUD SYSTEM</p>
+</div>
+
+<div class="management-panel">
+  <div class="control-group">
+    <label style="color: var(--accent4);">🛠️ INPUT NAMA ANGGOTA:</label>
+    <input type="text" id="newMemberName" class="control-input" placeholder="Nama Lengkap...">
+  </div>
+  <div class="control-group">
+    <label style="color: var(--accent4);">📋 PILIH JABATAN PANGKAT:</label>
+    <select id="selectRank" class="control-input" onchange="toggleCustomRankInput()">
+      <option value="Head Of Ems">Head Of Ems</option>
+      <option value="Deputy Of Ems">Deputy Of Ems</option>
+      <option value="Dokter Spesialis">Dokter Spesialis</option>
+      <option value="Paramedic">Paramedic</option>
+      <option value="Emt">Emt</option>
+      <option value="KUSTOM">-- Tulis Jabatan Kustom --</option>
+    </select>
+  </div>
+  <div class="control-group" id="customRankGroup" style="display: none;">
+    <label style="color: var(--danger);">✍️ NAMA JABATAN KUSTOM:</label>
+    <input type="text" id="customRankName" class="control-input" placeholder="Ketik pangkat baru...">
+  </div>
+  <div class="control-group">
+    <button class="btn btn-primary" id="btnSaveMember" onclick="addMemberToCloud()">➕ Simpan Ke Cloud</button>
+  </div>
 </div>
 
 <div class="control-panel">
@@ -100,7 +128,7 @@ body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-seri
     <div class="btn-group">
       <button class="btn btn-excel" onclick="exportToExcel()">📊 Excel</button>
       <button class="btn btn-pdf" onclick="exportToPDF()">📑 PDF</button>
-      <button class="btn btn-danger" onclick="resetAllData()">⚠️ Reset Semua</button>
+      <button class="btn btn-danger" id="btnResetAll" onclick="resetAllDataFromCloud()">⚠️ Reset Semua</button>
     </div>
   </div>
 
@@ -130,6 +158,9 @@ body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-seri
 </div>
 
 <script>
+// --- ✅ JEMBATAN LIVE CLOUD SAKTI ASLI PUNYA ZHAGI ---
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyvM5hPjWdxvldqQofNSQ_2tUf8qLrkeDOCfaUbUx036edUvgoEE7XnoQ6PPG5xCm2-Tg/exec';
+
 const CSV_ABSEN_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQdcWhromy0EiLziCHqBFVXGEerb4FFwdOy2pq7LPus9z5fet0tHJFzmC_xvWxh96MzRIPOWWtJa3Jm/pub?gid=0&single=true&output=csv';
 const CSV_ANGGOTA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQdcWhromy0EiLziCHqBFVXGEerb4FFwdOy2pq7LPus9z5fet0tHJFzmC_xvWxh96MzRIPOWWtJa3Jm/pub?gid=422470466&single=true&output=csv';
 
@@ -138,7 +169,7 @@ let rawAnggotaData = [];
 let lastFetchedAbsenRaw = "";    
 let lastFetchedAnggotaRaw = "";  
 let mainChart = null;
-let userRanks = {}; // Object penampung relasi Nama -> Jabatan
+let userRanks = {};
 
 window.addEventListener('load', () => {
   const sun = new Date(); sun.setDate(sun.getDate() - sun.getDay());
@@ -146,6 +177,68 @@ window.addEventListener('load', () => {
   fetchGoogleSheetsData(true); 
   setInterval(() => fetchGoogleSheetsData(false), 15000); // Auto sync mulus tiap 15 detik
 });
+
+function toggleCustomRankInput() {
+  document.getElementById('customRankGroup').style.display = (document.getElementById('selectRank').value === 'KUSTOM') ? 'flex' : 'none';
+}
+
+// ☁️ CLOUD ACTION 1: SIMPAN/UPDATE JABATAN BARU
+function addMemberToCloud() {
+  const nama = document.getElementById('newMemberName').value.trim();
+  const selectVal = document.getElementById('selectRank').value;
+  const jabatan = (selectVal === 'KUSTOM') ? document.getElementById('customRankName').value.trim() : selectVal;
+  
+  if(!nama || !jabatan) return alert('Nama dan Jabatan wajib diisi!');
+  document.getElementById('btnSaveMember').innerText = "⏳ Menyimpan...";
+  
+  fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'add_member', nama: nama, jabatan: jabatan })
+  }).then(() => {
+    alert(`Sukses dikirim! ${nama} resmi menjabat sebagai ${jabatan} di cloud.`);
+    document.getElementById('newMemberName').value = '';
+    document.getElementById('customRankName').value = '';
+    document.getElementById('btnSaveMember').innerText = "➕ Simpan Ke Cloud";
+    fetchGoogleSheetsData(true);
+  }).catch(e => alert('Gagal memproses ke server cloud: ' + e));
+}
+
+// ☁️ CLOUD ACTION 2: RESET PER ORANG DI MINGGU TERPILIH
+function resetPerPersonFromCloud(name) {
+  const week = document.getElementById('weekStart').value;
+  if(!confirm(`Hapus permanen seluruh data baris absen ${name} pada minggu ${week} langsung di Google Sheets?`)) return;
+  
+  document.getElementById('syncStatus').innerText = "⏳ Menghapus Baris Cloud...";
+  fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'reset_person', nama: name, week: week })
+  }).then(() => {
+    alert(`Data absen ${name} pada minggu kontrak ini sukses dibersihkan dari server.`);
+    fetchGoogleSheetsData(true);
+  });
+}
+
+// ☁️ CLOUD ACTION 3: RESET MASSAL TOTAL SATU MINGGU PENUH
+function resetAllDataFromCloud() {
+  const week = document.getElementById('weekStart').value;
+  if(!confirm(`⚠️ WARNING SEGERA!\nApakah lo yakin ingin MENGHAPUS TOTAL seluruh baris data absen minggu ${week} langsung dari server Google Sheets?`)) return;
+  
+  document.getElementById('btnResetAll').innerText = "⏳ Wiping cloud...";
+  fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'reset_all', week: week })
+  }).then(() => {
+    alert(`Wipe out total sukses! Semua log absen minggu ${week} telah lenyap.`);
+    document.getElementById('btnResetAll').innerText = "⚠️ Reset Semua";
+    fetchGoogleSheetsData(true);
+  });
+}
 
 function fetchGoogleSheetsData(forceRender = false) {
   Promise.all([
@@ -163,7 +256,6 @@ function fetchGoogleSheetsData(forceRender = false) {
     rawAbsenData = parseCSV(csvAbsen);
     rawAnggotaData = parseCSV(csvAnggota);
     
-    // mapping jabatan
     userRanks = {};
     rawAnggotaData.forEach(row => {
       if(row['Nama Anggota']) {
@@ -219,16 +311,17 @@ function renderTeamList(anggotaList) {
     return;
   }
   
-  // Urutan hierarki agar struktur kelihatan rapi di website
   const hirarkiOrder = ['head of ems', 'deputy of ems', 'dokter spesialis', 'paramedic', 'emt'];
   
   let sortedList = [...anggotaList].sort((a, b) => {
     let rA = (a['Jabatan'] || 'Emt').toLowerCase();
     let rB = (b['Jabatan'] || 'Emt').toLowerCase();
-    return hirarkiOrder.indexOf(rA) - hirarkiOrder.indexOf(rB);
+    let idxA = hirarkiOrder.indexOf(rA);
+    let idxB = hirarkiOrder.indexOf(rB);
+    return (idxA === -1 ? 99 : idxA) - (idxB === -1 ? 99 : idxB);
   });
 
-  sortedList.forEach((member, index) => {
+  sortedList.forEach((member) => {
     if(!member['Nama Anggota']) return;
     const rank = member['Jabatan'] || 'Emt';
     const rankClass = getRankClass(rank);
@@ -330,14 +423,14 @@ function processAndRender() {
     chartIncomes.push(income);
 
     tbody.innerHTML += `
-      <tr id="row-${btoa(member.name)}">
+      <tr>
         <td><strong>${member.name}</strong> <span class="member-badge ${rankClass}" style="font-size:0.65rem; padding:2px 4px;">${rank}</span></td>
         <td>${tHours.toFixed(1)} jam</td>
         <td>${tTreat} org</td>
         <td>${tPing} org</td>
         <td>${tAlpra} botol</td>
         <td style="color:var(--accent); font-weight:bold;">$${income}</td>
-        <td><button class="btn-reset-mini" onclick="resetPerPerson('${member.name}')">❌ Reset</button></td>
+        <td><button class="btn-reset-mini" onclick="resetPerPersonFromCloud('${member.name}')">❌ Reset</button></td>
       </tr>`;
   });
 
@@ -366,31 +459,11 @@ function renderChart(labels, data) {
   });
 }
 
-// 🛠️ FUNGSI RESET PER ORANG (Tampilan Web Lokal)
-function resetPerPerson(name) {
-  if(confirm(`Apakah lo yakin ingin mereset & menghapus data minggu ini untuk: ${name}?`)) {
-    // Menghapus data dari array lokal agar langsung hilang di layar
-    rawAbsenData = rawAbsenData.filter(row => !(row['Nama Anggota'] === name && row['Minggu Kontrak'] === document.getElementById('weekStart').value));
-    processAndRender();
-    alert(`Data ${name} berhasil direset di tampilan web! Seterusnya silakan bersihkan baris di Google Sheets agar permanen.`);
-  }
-}
-
-// ⚠️ FUNGSI RESET TOTAL SEMUA ORANG
-function resetAllData() {
-  const week = document.getElementById('weekStart').value;
-  if(confirm(`⚠️ PERINGATAN BESAR!\nApakah lo yakin ingin mereset TOTAL seluruh absen anggota pada minggu: ${week}?`)) {
-    rawAbsenData = rawAbsenData.filter(row => row['Minggu Kontrak'] !== week);
-    processAndRender();
-    alert(`Seluruh data absen minggu ${week} berhasil dibersihkan dari dashboard web!`);
-  }
-}
-
 function exportToExcel() {
   const week = document.getElementById('weekStart').value;
   const table = document.getElementById('reportTable');
   const wb = XLSX.utils.table_to_book(table, { sheet: "Rekap Absensi" });
-  XLSX.writeFile(wb, `Rekap_Absensi_EMS_Valoria_Minggu_${week}.xlsx`);
+  Xcontent.writeFile(wb, `Rekap_Absensi_EMS_Valoria_Minggu_${week}.xlsx`);
 }
 
 function exportToPDF() {
