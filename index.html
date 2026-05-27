@@ -173,7 +173,6 @@ let lastFetchedAnggotaRaw = "";
 let mainChart = null;
 let userRanks = {};
 
-// 🧠 INJEKSI LOKAL BADAK: Muat isi ketikan terakhir pas pertama kali web dibuka
 window.addEventListener('load', () => {
   const sun = new Date(); sun.setDate(sun.getDate() - sun.getDay());
   document.getElementById('weekStart').value = sun.toISOString().split('T')[0];
@@ -347,12 +346,10 @@ function processAndRender() {
   const selectedWeek = document.getElementById('weekStart').value;
   const searchQuery = document.getElementById('searchName').value.toLowerCase().trim();
   
-  // 💾 1. Ambil angka yang sedang tertulis di kotak layar saat ini
   let currentTreat = document.getElementById('priceTreatment').value;
   let currentPing = document.getElementById('pricePingsan').value;
   let currentAlpra = document.getElementById('priceAlprazolam').value;
 
-  // 🔒 2. Hanya update memori JIKA Zhagi sedang fokus ngetik sendiri (bukan pemicu auto-refresh background)
   if (document.activeElement === document.getElementById('priceTreatment') && currentTreat !== '') {
     localStorage.setItem('zhagi_treat', currentTreat);
   }
@@ -363,12 +360,10 @@ function processAndRender() {
     localStorage.setItem('zhagi_alpra', currentAlpra);
   }
 
-  // 🧠 3. AMBIL DATA PRIORITAS: Cek memori browser, kalau kosong melompong baru balik ke default awal
   const rateTreatment = localStorage.getItem('zhagi_treat') ? parseFloat(localStorage.getItem('zhagi_treat')) : 35;
   const ratePingsan = localStorage.getItem('zhagi_ping') ? parseFloat(localStorage.getItem('zhagi_ping')) : 45;
   const rateAlprazolam = localStorage.getItem('zhagi_alpra') ? parseFloat(localStorage.getItem('zhagi_alpra')) : 50;
 
-  // 👑 4. KUNCI PAKSA BALIK KE ELEMEN LAYAR (Biar kotak input gak bisa di-overwrite sepihak pas render data)
   document.getElementById('priceTreatment').value = rateTreatment;
   document.getElementById('pricePingsan').value = ratePingsan;
   document.getElementById('priceAlprazolam').value = rateAlprazolam;
@@ -379,7 +374,22 @@ function processAndRender() {
   container.innerHTML = '';
   tbody.innerHTML = '';
   
-  let filtered = rawAbsenData.filter(row => row['Minggu Kontrak'] === selectedWeek);
+  // ⚔️ BARIKADE FILTER KEBAL EROR: Mengawinkan format Bot (YYYY-MM-DD) dan membersihkan data petik hantu
+  let filtered = rawAbsenData.filter(row => {
+    if (!row['Minggu Kontrak']) return false;
+    
+    const tglSheet = row['Minggu Kontrak'].replace(/'/g, "").trim(); 
+    
+    // Jika data di sheet berformat DD/MM/YYYY, konversikan input kalender web (YYYY-MM-DD) agar seimbang
+    if (tglSheet.includes('/')) {
+      if (!selectedWeek) return false;
+      const [yyyy, mm, dd] = selectedWeek.split('-');
+      return tglSheet === `${dd}/${mm}/${yyyy}`;
+    }
+    
+    return tglSheet === selectedWeek;
+  });
+
   if(searchQuery !== '') {
     filtered = filtered.filter(row => row['Nama Anggota'] && row['Nama Anggota'].toLowerCase().includes(searchQuery));
   }
@@ -390,7 +400,10 @@ function processAndRender() {
     if(!name) return;
     if(!grouped[name]) grouped[name] = { name: name, days: {} };
     
-    const hari = row['Hari'];
+    // Cegah data bot 'N/A' merusak struktur visual papan nama hari
+    let hari = row['Hari'] ? row['Hari'].trim() : 'Minggu';
+    if (hari === 'N/A' || hari === '') hari = 'Minggu'; 
+    
     if(!grouped[name].days[hari]) grouped[name].days[hari] = [];
     
     grouped[name].days[hari].push({
