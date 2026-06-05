@@ -1,559 +1,725 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
-<title>Sistem Absensi Analytics LIVE GOOGLE SHEETS</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DATA ABSENSI EMSVRP - Emergency Medical Service Valoria</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@500;700;800&display=swap" rel="stylesheet">
 
-<style>
-:root { --bg: #0d0f14; --surface: #161a23; --surface2: #1e2330; --border: #2a3045; --accent: #4fffb0; --accent4: #74b9ff; --text: #e8eaf0; --muted: #6b7490; --danger: #ff7675; --warning: #ffeaa7; }
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; padding: 24px 16px; }
-.header { text-align: center; margin-bottom: 24px; }
-.header h1 { font-size: 2.2rem; background: linear-gradient(135deg,var(--accent),var(--accent4)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800; }
-
-.control-panel, .management-panel { background: var(--surface); padding: 20px; border-radius: 16px; border: 1px solid var(--border); margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; }
-.management-panel { border-color: var(--accent4); background: linear-gradient(180deg, var(--surface) 0%, rgba(116,185,255,0.03) 100%); }
-.control-group { display: flex; flex-direction: column; gap: 5px; }
-.control-group label { font-size: 0.75rem; color: var(--muted); font-weight: 600; }
-.control-input { background: var(--bg); border: 1px solid var(--border); color: #fff; padding: 10px 14px; border-radius: 8px; font-family: 'Syne', sans-serif; font-size: 0.85rem; outline: none; min-width: 140px; }
-.control-input:focus { border-color: var(--accent); }
-.status-badge { background: rgba(79,255,176,0.1); color: var(--accent); padding: 8px 14px; border-radius: 8px; font-family: 'DM Mono', monospace; font-size: 0.8rem; margin-left: auto; align-self: center; }
-
-.btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
-.btn { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 10px 14px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 6px; transition: all 0.2s; }
-.btn:hover { border-color: var(--accent); background: rgba(79,255,176,0.05); }
-.btn-primary { border-color: var(--accent4); color: var(--accent4); }
-.btn-primary:hover { background: rgba(116,185,255,0.1); }
-.btn-excel:hover { border-color: #2ecc71; color: #2ecc71; }
-.btn-pdf:hover { border-color: #e74c3c; color: #e74c3c; }
-.btn-danger { border-color: var(--danger); color: var(--danger); }
-.btn-danger:hover { background: rgba(255,118,117,0.1); }
-.btn-reset-mini { padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; background: rgba(255,118,117,0.1); border: 1px solid var(--danger); color: var(--danger); cursor: pointer; }
-.btn-reset-mini:hover { background: var(--danger); color: #fff; }
-
-.price-box { border-left: 2px solid var(--border); padding-left: 20px; display: flex; flex-wrap: wrap; gap: 12px; }
-
-.dashboard-layout { display: grid; grid-template-columns: 1fr 320px; gap: 24px; }
-@media (max-width: 1100px) { .dashboard-layout { grid-template-columns: 1fr; .price-box { border-left: none; padding-left: 0; } } }
-.member-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; margin-bottom: 14px; padding: 15px; }
-.member-top { display: flex; justify-content: space-between; align-items: center; font-weight: 700; margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 8px; color: #fff; }
-.member-badge { font-size: 0.7rem; padding: 4px 8px; border-radius: 6px; text-transform: uppercase; font-family: 'DM Mono', monospace; }
-
-.days-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
-.day-box { background: var(--surface2); padding: 8px; border-radius: 8px; font-size: 0.75rem; border: 1px solid rgba(42,48,69,0.5); }
-.day-name { color: var(--accent4); font-weight: bold; margin-bottom: 4px; }
-.summary-table { width: 100%; border-collapse: collapse; margin-top: 24px; background: var(--surface); border-radius: 12px; overflow: hidden; border: 1px solid var(--border); }
-.summary-table th, .summary-table td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
-.summary-table th { background: var(--surface2); color: var(--muted); font-weight: 600; }
-.chart-section { background: var(--surface); padding: 20px; border-radius: 16px; border: 1px solid var(--border); margin-top: 24px; height: 320px; }
-
-.sidebar-panel { background: var(--surface); padding: 20px; border-radius: 16px; border: 1px solid var(--border); height: fit-content; }
-.sidebar-title { font-size: 1rem; font-weight: 700; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 8px; color: var(--accent4); }
-.team-list { display: flex; flex-direction: column; gap: 10px; font-size: 0.85rem; }
-.team-item { background: var(--surface2); padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(42,48,69,0.3); display: flex; flex-direction: column; gap: 4px; }
-
-/* 🎨 PEWARNAAN BADGE JABATAN RESMI VALORIA */
-.rank-head { background: rgba(255,118,117,0.15); color: #ff7675; border: 1px solid #ff7675; }
-.rank-deputy { background: rgba(255,168,1,0.15); color: #ffa801; border: 1px solid #ffa801; }
-.rank-secretariat { background: rgba(255,118,243,0.15); color: #ff76f3; border: 1px solid #ff76f3; }
-.rank-dokter { background: rgba(116,185,255,0.15); color: #74b9ff; border: 1px solid #74b9ff; }
-.rank-pmd { background: rgba(162,155,254,0.15); color: #a29bfe; border: 1px solid #a29bfe; }
-.rank-emt { background: rgba(85,239,196,0.15); color: #55efc4; border: 1px solid #55efc4; }
-.rank-default { background: rgba(107,116,144,0.15); color: #6b7490; border: 1px solid #6b7490; }
-</style>
+    <style>
+        :root {
+            --purple-main: #6c5ce7;
+            --purple-dark: #a29bfe;
+            --cyan-accent: #00cec9;
+            --bg-dark: #090a0f;
+            --surface-dark: #12141c;
+            --border-color: #222533;
+        }
+        body {
+            background-color: var(--bg-dark);
+            color: #e8eaf0;
+            font-family: 'Syne', sans-serif;
+        }
+        .font-mono-custom {
+            font-family: 'DM Mono', monospace;
+        }
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #12141c; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #6c5ce7; border-radius: 3px; }
+        .active-menu {
+            background: linear-gradient(90deg, rgba(108,92,231,0.2) 0%, rgba(0,206,201,0.05) 100%);
+            border-left: 4px solid var(--cyan-accent);
+            color: #fff;
+        }
+        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        emsPurple: '#6c5ce7',
+                        emsCyan: '#00cec9',
+                        emsDark: '#12141c',
+                        emsBorder: '#222533'
+                    }
+                }
+            }
+        }
+    </script>
 </head>
-<body>
+<body class="overflow-x-hidden">
 
-<div class="header">
-  <h1>⚡ Dashboard Absensi Cloud Valoria</h1>
-  <p style="color: var(--muted); font-size: 0.85rem; margin-top: 5px; font-family: 'DM Mono', monospace;">REKAP, RESET & MANAGEMENT STRUKTUR CLOUD SYSTEM</p>
-</div>
+    <div id="toast-container"></div>
 
-<div class="management-panel">
-  <div class="control-group">
-    <label style="color: var(--accent4);">🛠️ INPUT NAMA ANGGOTA:</label>
-    <input type="text" id="newMemberName" class="control-input" placeholder="Nama Lengkap...">
-  </div>
-  <div class="control-group">
-    <label style="color: var(--accent4);">📋 PILIH JABATAN PANGKAT:</label>
-    <select id="selectRank" class="control-input" onchange="toggleCustomRankInput()">
-      <option value="HEAD OF EMS">HEAD OF EMS</option>
-      <option value="DEPUTY OF EMS">DEPUTY OF EMS</option>
-      <option value="SECRETARIAT">SECRETARIAT</option>
-      <option value="DOKTER">DOKTER</option>
-      <option value="PMD">PMD</option>
-      <option value="EMT">EMT</option>
-      <option value="KUSTOM">-- Tulis Jabatan Kustom --</option>
-    </select>
-  </div>
-  <div class="control-group" id="customRankGroup" style="display: none;">
-    <label style="color: var(--danger);">✍️ NAMA JABATAN KUSTOM:</label>
-    <input type="text" id="customRankName" class="control-input" placeholder="Ketik pangkat baru...">
-  </div>
-  <div class="control-group">
-    <button class="btn btn-primary" id="btnSaveMember" onclick="addMemberToCloud()">➕ Simpan Ke Cloud</button>
-  </div>
-</div>
+    <div class="flex min-h-screen">
+        <!-- SIDEBAR NAVIGATION PANELS -->
+        <aside class="w-64 bg-emsDark border-r border-emsBorder flex flex-col justify-between p-4 shrink-0">
+            <div>
+                <div class="flex items-center gap-3 pb-6 mb-6 border-b border-emsBorder">
+                    <div class="w-10 h-10 bg-emsPurple rounded-xl flex items-center justify-center text-xl font-bold text-white shadow-[0_0_15px_rgba(108,92,231,0.5)]">Ω</div>
+                    <div>
+                        <h2 class="font-bold text-sm tracking-wide text-white">EMSVRP</h2>
+                        <p class="text-[10px] text-gray-500 uppercase tracking-widest font-mono-custom">EMS Valoria System</p>
+                    </div>
+                </div>
+                
+                <nav class="space-y-1">
+                    <button onclick="switchTab('dashboard')" id="menu-dashboard" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:text-white transition active-menu">
+                        📊 Dashboard
+                    </button>
+                    <button onclick="switchTab('rekap-mingguan')" id="menu-rekap-mingguan" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:text-white transition">
+                        📅 Rekap Mingguan
+                    </button>
+                    <button onclick="switchTab('daftar-staf')" id="menu-daftar-staf" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:text-white transition">
+                        👥 Daftar Staf Aktif
+                    </button>
+                    <button onclick="switchTab('struktur-jabatan')" id="menu-struktur-jabatan" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:text-white transition">
+                        🌿 Struktur Jabatan
+                    </button>
+                    <button onclick="switchTab('export-panel')" id="menu-export-panel" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:text-white transition">
+                        💾 Backup & Export
+                    </button>
+                </nav>
+            </div>
 
-<div class="control-panel">
-  <div class="control-group">
-    <label>PILIH MINGGU REKAP:</label>
-    <input type="date" id="weekStart" class="control-input" style="font-family: 'DM Mono', monospace;" onchange="processAndRender()">
-  </div>
-  
-  <div class="control-group">
-    <label>CARI NAMA ANGGOTA:</label>
-    <input type="text" id="searchName" class="control-input" placeholder="Ketik nama tim..." oninput="processAndRender()">
-  </div>
+            <div class="p-4 bg-black/30 rounded-2xl border border-emsBorder/60 text-center">
+                <p class="text-[11px] text-gray-500 font-mono-custom">"We Care, We Heal, We're HRMC."</p>
+            </div>
+        </aside>
 
-  <div class="price-box">
-    <div class="control-group">
-      <label>💰 TREATMENT ($):</label>
-      <input type="number" id="priceTreatment" class="control-input" value="35" style="width: 75px; min-width: 75px; font-family: 'DM Mono';" oninput="processAndRender()">
-    </div>
-    <div class="control-group">
-      <label>💰 PINGSAN ($):</label>
-      <input type="number" id="pricePingsan" class="control-input" value="45" style="width: 75px; min-width: 75px; font-family: 'DM Mono';" oninput="processAndRender()">
-    </div>
-    <div class="control-group">
-      <label>💊 ALPRAZOLAM ($):</label>
-      <input type="number" id="priceAlprazolam" class="control-input" value="50" style="width: 75px; min-width: 75px; font-family: 'DM Mono';" oninput="processAndRender()">
-    </div>
-  </div>
+        <!-- MAIN LAYOUT PANEL -->
+        <main class="flex-1 p-6 overflow-y-auto max-w-[calc(100vw-16rem)]">
+            <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+                <div>
+                    <h1 class="text-2xl font-extrabold text-white tracking-tight">DATA ABSENSI EMSVRP</h1>
+                    <p class="text-xs text-emsCyan font-mono-custom">Emergency Medical Service Valoria Center Analytics</p>
+                </div>
+                <div class="flex items-center gap-4 bg-emsDark px-4 py-2 rounded-xl border border-emsBorder">
+                    <div class="text-right">
+                        <p id="top-live-date" class="text-xs text-white font-mono-custom">Memuat tanggal...</p>
+                        <p id="top-live-time" class="text-sm font-bold text-emsPurple font-mono-custom">00:00:00</p>
+                    </div>
+                    <div class="h-8 w-px bg-emsBorder"></div>
+                    <div id="syncStatus" class="text-xs font-mono-custom text-amber-400 animate-pulse">🔄 Menghubungkan...</div>
+                </div>
+            </header>
 
-  <div class="control-group" style="margin-left: 5px;">
-    <div class="btn-group">
-      <button class="btn btn-excel" onclick="exportToExcel()">📊 Excel</button>
-      <button class="btn btn-pdf" onclick="exportToPDF()">📑 PDF</button>
-      <button class="btn btn-danger" id="btnResetAll" onclick="resetAllDataFromCloud()">⚠️ Reset Semua</button>
-    </div>
-  </div>
+            <!-- ================= TAB: DASHBOARD ================= -->
+            <section id="tab-dashboard" class="tab-content space-y-6">
+                <!-- 4 MAIN OVERVIEW STATS WIDGETS -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-emsDark p-5 rounded-2xl border border-emsBorder flex items-center gap-4 shadow-xl">
+                        <div class="p-3 rounded-xl bg-purple-500/10 text-emsPurple text-2xl">⏱️</div>
+                        <div>
+                            <p class="text-xs text-gray-400 uppercase tracking-wider">Total Duty Minggu Ini</p>
+                            <h3 id="widget-total-duty" class="text-xl font-bold text-white font-mono-custom">0.0 Jam</h3>
+                        </div>
+                    </div>
+                    <div class="bg-emsDark p-5 rounded-2xl border border-emsBorder flex items-center gap-4 shadow-xl">
+                        <div class="p-3 rounded-xl bg-cyan-500/10 text-emsCyan text-2xl">🟢</div>
+                        <div>
+                            <p class="text-xs text-gray-400 uppercase tracking-wider">Total Treatment</p>
+                            <h3 id="widget-total-treat" class="text-xl font-bold text-white font-mono-custom">0</h3>
+                        </div>
+                    </div>
+                    <div class="bg-emsDark p-5 rounded-2xl border border-emsBorder flex items-center gap-4 shadow-xl">
+                        <div class="p-3 rounded-xl bg-orange-500/10 text-orange-400 text-2xl">🔴</div>
+                        <div>
+                            <p class="text-xs text-gray-400 uppercase tracking-wider">Total Pingsan</p>
+                            <h3 id="widget-total-pingsan" class="text-xl font-bold text-white font-mono-custom">0 Penanganan</h3>
+                        </div>
+                    </div>
+                    <div class="bg-emsDark p-5 rounded-2xl border border-emsBorder flex items-center gap-4 shadow-xl">
+                        <div class="p-3 rounded-xl bg-green-500/10 text-green-400 text-2xl">💰</div>
+                        <div>
+                            <p class="text-xs text-gray-400 uppercase tracking-wider">Total Pemasukan</p>
+                            <h3 id="widget-total-income" class="text-xl font-bold text-green-400 font-mono-custom">$0</h3>
+                        </div>
+                    </div>
+                </div>
 
-  <div class="status-badge" id="syncStatus">🔄 Menghubungkan...</div>
-</div>
+                <!-- CONFIG HARGA KOMODITAS (History Safe Per Minggu) -->
+                <div class="bg-emsDark p-6 rounded-2xl border border-emsBorder space-y-4 shadow-2xl">
+                    <div class="border-b border-emsBorder pb-2">
+                        <h3 class="font-bold text-white text-base">⚙️ CONFIG TARIF LAYANAN MINGGU INI</h3>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="flex items-center justify-between gap-4 p-3 bg-black/20 rounded-xl border border-emsBorder">
+                            <div class="flex items-center gap-3">
+                                <span class="text-xl">🟢</span>
+                                <div>
+                                    <p class="text-xs text-white font-medium">Tarif Treatment</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center bg-black/40 border border-emsBorder rounded-lg px-2 max-w-[100px]">
+                                <span class="text-xs text-gray-400 font-mono-custom">$</span>
+                                <input type="number" id="cfg-price-treat" value="35" oninput="saveServiceRates()" class="w-full bg-transparent px-1 py-1.5 text-xs font-bold text-white outline-none font-mono-custom text-right">
+                            </div>
+                        </div>
 
-<div class="dashboard-layout">
-  <div>
-    <div id="membersContainer"></div>
+                        <div class="flex items-center justify-between gap-4 p-3 bg-black/20 rounded-xl border border-emsBorder">
+                            <div class="flex items-center gap-3">
+                                <span class="text-xl">🔴</span>
+                                <div>
+                                    <p class="text-xs text-white font-medium">Tarif Pingsan</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center bg-black/40 border border-emsBorder rounded-lg px-2 max-w-[100px]">
+                                <span class="text-xs text-gray-400 font-mono-custom">$</span>
+                                <input type="number" id="cfg-price-pingsan" value="45" oninput="saveServiceRates()" class="w-full bg-transparent px-1 py-1.5 text-xs font-bold text-white outline-none font-mono-custom text-right">
+                            </div>
+                        </div>
 
-    <table class="summary-table" id="reportTable">
-      <thead>
-        <tr><th>Nama Anggota</th><th>Total Jam</th><th>Treatment</th><th>Pingsan</th><th>Alprazolam</th><th>Total Income</th><th>Aksi</th></tr>
-      </thead>
-      <tbody id="summaryBody"></tbody>
-    </table>
+                        <div class="flex items-center justify-between gap-4 p-3 bg-black/20 rounded-xl border border-emsBorder">
+                            <div class="flex items-center gap-3">
+                                <span class="text-xl">💊</span>
+                                <div>
+                                    <p class="text-xs text-white font-medium">Tarif Alprazolam</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center bg-black/40 border border-emsBorder rounded-lg px-2 max-w-[100px]">
+                                <span class="text-xs text-gray-400 font-mono-custom">$</span>
+                                <input type="number" id="cfg-price-alpra" value="50" oninput="saveServiceRates()" class="w-full bg-transparent px-1 py-1.5 text-xs font-bold text-white outline-none font-mono-custom text-right">
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-    <div class="chart-section"><canvas id="analyticsChart"></canvas></div>
-  </div>
+                <!-- LIVE MONITOR AKTIVITAS GOOGLE SHEETS -->
+                <div class="bg-emsDark p-6 rounded-2xl border border-emsBorder space-y-4 shadow-xl">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-emsBorder pb-4">
+                        <div>
+                            <h3 class="font-bold text-white text-base">📋 LOG DATA ABSENSI LIVE TIM</h3>
+                            <p class="text-[11px] text-gray-400">Menampilkan seluruh riwayat log yang berhasil ditarik dari basis Google Cloud</p>
+                        </div>
+                        
+                        <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                            <input type="text" id="table-search-query" oninput="renderMainTableLogs()" placeholder="Cari Nama / Jabatan / Tanggal..." class="bg-black/40 border border-emsBorder rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-emsPurple min-w-[220px]">
+                            <button onclick="clearLogsFilter()" class="px-3 py-2 rounded-xl border border-emsBorder text-xs text-gray-300 hover:bg-white/5 font-medium">Reset Filter</button>
+                        </div>
+                    </div>
 
-  <div class="sidebar-panel">
-    <div class="sidebar-title">📋 Struktur Organisasi EMS Resmi</div>
-    <div id="teamListContainer" class="team-list">
-      <div style="color:var(--muted); font-size:0.8rem; text-align:center;">Memuat struktur jabatan...</div>
-    </div>
-  </div>
-</div>
+                    <div class="overflow-x-auto rounded-xl border border-emsBorder">
+                        <table class="w-full border-collapse text-left text-xs">
+                            <thead>
+                                <tr class="bg-black/40 text-gray-400 font-semibold uppercase tracking-wider border-b border-emsBorder">
+                                    <th class="p-3">No</th>
+                                    <th class="p-3">Nama Petugas</th>
+                                    <th class="p-3">Jabatan</th>
+                                    <th class="p-3">Tanggal</th>
+                                    <th class="p-3">Hari</th>
+                                    <th class="p-3">Jam Masuk</th>
+                                    <th class="p-3">Jam Keluar</th>
+                                    <th class="p-3">Duty</th>
+                                    <th class="p-3 text-center">T</th>
+                                    <th class="p-3 text-center">P</th>
+                                    <th class="p-3 text-center">A</th>
+                                    <th class="p-3 text-right">Pemasukan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="main-table-log-body" class="divide-y divide-emsBorder">
+                                <!-- Terisi otomatis dari Google Sheets -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
 
-<script>
-// --- ✅ JEMBATAN LIVE CLOUD SAKTI ASLI PUNYA ZHAGI ---
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyvM5hPjWdxvldqQofNSQ_2tUf8qLrkeDOCfaUbUx036edUvgoEE7XnoQ6PPG5xCm2-Tg/exec';
+            <!-- ================= TAB: REKAP MINGGUAN GRID ================= -->
+            <section id="tab-rekap-mingguan" class="tab-content hidden space-y-6">
+                <div class="bg-emsDark p-6 rounded-2xl border border-emsBorder space-y-4">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-emsBorder pb-4">
+                        <div>
+                            <h2 class="text-lg font-bold text-white">📅 Visualisasi Kartu Distribusi Absensi Staf</h2>
+                            <p class="text-xs text-gray-400">Data disaring berdasarkan tanggal kalender (Otomatis membaca format YYYY-MM-DD maupun DD/MM/YYYY)</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <label class="text-xs text-gray-400 font-medium font-mono-custom">Minggu:</label>
+                            <input type="date" id="rekap-filter-date" onchange="renderWeeklyMemberCards()" class="bg-black/40 border border-emsBorder rounded-xl px-3 py-2 text-xs text-white font-mono-custom outline-none focus:border-emsPurple">
+                        </div>
+                    </div>
 
-const CSV_ABSEN_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQdcWhromy0EiLziCHqBFVXGEerb4FFwdOy2pq7LPus9z5fet0tHJFzmC_xvWxh96MzRIPOWWtJa3Jm/pub?gid=0&single=true&output=csv';
-const CSV_ANGGOTA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQdcWhromy0EiLziCHqBFVXGEerb4FFwdOy2pq7LPus9z5fet0tHJFzmC_xvWxh96MzRIPOWWtJa3Jm/pub?gid=422470466&single=true&output=csv';
+                    <div id="weekly-cards-grid-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Dinamis dari JS -->
+                    </div>
+                </div>
 
-let rawAbsenData = [];
-let rawAnggotaData = [];
-let lastFetchedAbsenRaw = "";    
-let lastFetchedAnggotaRaw = "";  
-let mainChart = null;
-let userRanks = {};
+                <div class="bg-emsDark p-6 rounded-2xl border border-emsBorder space-y-4">
+                    <h3 class="font-bold text-white text-base">📊 Grafik Total Distribusi Finansial Anggota</h3>
+                    <div class="h-64 relative w-full">
+                        <canvas id="chart-rekap-batang"></canvas>
+                    </div>
+                </div>
+            </section>
 
-window.addEventListener('load', () => {
-  const sun = new Date(); sun.setDate(sun.getDate() - sun.getDay());
-  document.getElementById('weekStart').value = sun.toISOString().split('T')[0];
-  
-  if(localStorage.getItem('zhagi_treat')) document.getElementById('priceTreatment').value = localStorage.getItem('zhagi_treat');
-  if(localStorage.getItem('zhagi_ping')) document.getElementById('pricePingsan').value = localStorage.getItem('zhagi_ping');
-  if(localStorage.getItem('zhagi_alpra')) document.getElementById('priceAlprazolam').value = localStorage.getItem('zhagi_alpra');
+            <!-- ================= TAB: DAFTAR STAF AKTIF ================= -->
+            <section id="tab-daftar-staf" class="tab-content hidden space-y-4">
+                <div class="bg-emsDark p-6 rounded-2xl border border-emsBorder space-y-4 shadow-2xl">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-emsBorder pb-3">
+                        <div>
+                            <h2 class="text-base font-bold text-white">👥 DATA DAFTAR STAF TIM (LIVE SHEET DATABASE)</h2>
+                            <p class="text-xs text-gray-400">Daftar anggota resmi yang disinkronkan dari lembar database kedua Google Sheets</p>
+                        </div>
+                    </div>
+                    <div class="overflow-y-auto max-h-[400px] border border-emsBorder rounded-xl custom-scroll">
+                        <table class="w-full border-collapse text-left text-xs">
+                            <thead>
+                                <tr class="bg-black/40 text-gray-400 font-semibold border-b border-emsBorder uppercase tracking-wider sticky top-0">
+                                    <th class="p-3">No</th>
+                                    <th class="p-3">Nama Anggota</th>
+                                    <th class="p-3">Status Pangkat</th>
+                                </tr>
+                            </thead>
+                            <tbody id="staf-panel-table-body" class="divide-y divide-emsBorder">
+                                <!-- Dinamis disuntik oleh lembar Daftar_Anggota -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
 
-  fetchGoogleSheetsData(true); 
-  setInterval(() => fetchGoogleSheetsData(false), 15000); 
-});
+            <!-- ================= TAB: STRUKTUR JABATAN ================= -->
+            <section id="tab-struktur-jabatan" class="tab-content hidden space-y-4">
+                <div class="bg-emsDark p-6 rounded-2xl border border-emsBorder space-y-4">
+                    <h2 class="text-base font-bold text-white">👑 HIERARKI KELOMPOK STRUKTUR JABATAN DEFAULT</h2>
+                    <div class="space-y-2" id="rank-drag-container">
+                        <!-- Urutan hierarki statis/dinamis visual -->
+                    </div>
+                </div>
+            </section>
 
-function toggleCustomRankInput() {
-  document.getElementById('customRankGroup').style.display = (document.getElementById('selectRank').value === 'KUSTOM') ? 'flex' : 'none';
-}
+            <!-- ================= TAB: EXPORT PANEL ================= -->
+            <section id="tab-export-panel" class="tab-content hidden grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-emsDark p-6 rounded-2xl border border-emsBorder space-y-4 shadow-xl">
+                    <h3 class="font-bold text-white text-base border-b border-emsBorder pb-2">📂 UNDUH DOKUMEN REKAPITULASI MINGGUAN</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                        <button onclick="exportToExcelVRP()" class="p-4 rounded-xl bg-green-600/10 border border-green-500 text-green-400 text-xs font-bold hover:bg-green-600 hover:text-white transition flex flex-col items-center gap-2 justify-center">
+                            📊 Excel (.xlsx)
+                        </button>
+                        <button onclick="exportToPDFVRP()" class="p-4 rounded-xl bg-red-600/10 border border-red-500 text-red-400 text-xs font-bold hover:bg-red-600 hover:text-white transition flex flex-col items-center gap-2 justify-center">
+                            📑 PDF (.pdf)
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
 
-function addMemberToCloud() {
-  const nama = document.getElementById('newMemberName').value.trim();
-  const selectVal = document.getElementById('selectRank').value;
-  const jabatan = (selectVal === 'KUSTOM') ? document.getElementById('customRankName').value.trim() : selectVal;
-  
-  if(!nama || !jabatan) return alert('Nama dan Jabatan wajib diisi!');
-  document.getElementById('btnSaveMember').innerText = "⏳ Menyimpan...";
-  
-  fetch(APPS_SCRIPT_URL, {
-    method: 'POST',
-    mode: 'no-cors',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'add_member', nama: nama, jabatan: jabatan })
-  }).then(() => {
-    alert(`Sukses dikirim! ${nama} resmi menjabat sebagai ${jabatan} di cloud.`);
-    document.getElementById('newMemberName').value = '';
-    document.getElementById('customRankName').value = '';
-    document.getElementById('btnSaveMember').innerText = "➕ Simpan Ke Cloud";
-    fetchGoogleSheetsData(true);
-  }).catch(e => alert('Gagal memproses ke server cloud: ' + e));
-}
+    <script>
+        // --- 1. KUNCI UTAMA JEMBATAN LIVE ABSENSI GOOGLE SHEETS ZHAGI ---
+        const CSV_ABSEN_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQdcWhromy0EiLziCHqBFVXGEerb4FFwdOy2pq7LPus9z5fet0tHJFzmC_xvWxh96MzRIPOWWtJa3Jm/pub?gid=0&single=true&output=csv';
+        const CSV_ANGGOTA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQdcWhromy0EiLziCHqBFVXGEerb4FFwdOy2pq7LPus9z5fet0tHJFzmC_xvWxh96MzRIPOWWtJa3Jm/pub?gid=422470466&single=true&output=csv';
 
-function resetPerPersonFromCloud(name) {
-  const week = document.getElementById('weekStart').value;
-  if(!confirm(`Hapus permanen seluruh data baris absen ${name} pada minggu ${week} langsung di Google Sheets?`)) return;
-  
-  document.getElementById('syncStatus').innerText = "⏳ Menghapus Baris Cloud...";
-  fetch(APPS_SCRIPT_URL, {
-    method: 'POST',
-    mode: 'no-cors',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'reset_person', nama: name, week: week })
-  }).then(() => {
-    alert(`Data absen ${name} pada minggu kontrak ini sukses dibersihkan dari server.`);
-    fetchGoogleSheetsData(true);
-  });
-}
+        let rawAbsenData = [];
+        let rawAnggotaData = [];
+        let lastFetchedAbsenRaw = "";    
+        let lastFetchedAnggotaRaw = "";  
+        let mainChart = null;
+        let userRanks = {};
+        let hargaLayananHistory = JSON.parse(localStorage.getItem('vrp_harga_history')) || {};
+        
+        const jabatanData = ["HEAD OF EMS", "DEPUTY OF EMS", "SECRETARIAT", "DOKTER", "PARAMEDIC", "EMT", "TRAINEE"];
 
-function resetAllDataFromCloud() {
-  const week = document.getElementById('weekStart').value;
-  if(!confirm(`⚠️ WARNING SEGERA!\nApakah lo yakin ingin MENGHAPUS TOTAL seluruh baris data absen minggu ${week} langsung dari server Google Sheets?`)) return;
-  
-  document.getElementById('btnResetAll').innerText = "⏳ Wiping cloud...";
-  fetch(APPS_SCRIPT_URL, {
-    method: 'POST',
-    mode: 'no-cors',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'reset_all', week: week })
-  }).then(() => {
-    alert(`Wipe out total sukses! Semua log absen minggu ${week} telah lenyap.`);
-    document.getElementById('btnResetAll').innerText = "⚠️ Reset Semua";
-    fetchGoogleSheetsData(true);
-  });
-}
+        // --- 2. ENGINE KICKER ---
+        window.addEventListener('load', () => {
+            initLiveTimeEngine();
+            const sun = new Date(); sun.setDate(sun.getDate() - sun.getDay());
+            document.getElementById('rekap-filter-date').value = sun.toISOString().split('T')[0];
 
-function fetchGoogleSheetsData(forceRender = false) {
-  Promise.all([
-    fetch(CSV_ABSEN_URL + '&cachebust=' + Date.now()).then(res => res.text()), 
-    fetch(CSV_ANGGOTA_URL + '&cachebust=' + Date.now()).then(res => res.text())
-  ])
-  .then(([csvAbsen, csvAnggota]) => {
-    if (!forceRender && csvAbsen === lastFetchedAbsenRaw && csvAnggota === lastFetchedAnggotaRaw) {
-      return; 
-    }
-    
-    lastFetchedAbsenRaw = csvAbsen;
-    lastFetchedAnggotaRaw = csvAnggota;
+            loadCurrentWeekRatesIntoInputs();
+            
+            // Eksekusi penarikan data cloud Google Sheets secara live
+            fetchGoogleSheetsCloudData(true);
+            setInterval(() => fetchGoogleSheetsCloudData(false), 15000);
+        });
 
-    rawAbsenData = parseCSV(csvAbsen);
-    rawAnggotaData = parseCSV(csvAnggota);
-    
-    userRanks = {};
-    rawAnggotaData.forEach(row => {
-      if(row['Nama Anggota']) {
-        userRanks[row['Nama Anggota']] = row['Jabatan'] || 'EMT';
-      }
-    });
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('active-menu'));
+            document.getElementById(`menu-${tabId}`).classList.add('active-menu');
+        }
 
-    renderTeamList(rawAnggotaData);
-    processAndRender();
-    
-    document.getElementById('syncStatus').innerText = "🟢 Terhubung ke Google Cloud";
-    document.getElementById('syncStatus').style.color = "var(--accent)";
-  })
-  .catch(err => {
-    console.error("Eror sinkronisasi data:", err);
-    document.getElementById('syncStatus').innerText = "🔴 Sinkronisasi Terputus";
-    document.getElementById('syncStatus').style.color = "var(--danger)";
-  });
-}
+        function initLiveTimeEngine() {
+            setInterval(() => {
+                const now = new Date();
+                const opsi = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                document.getElementById('top-live-date').innerText = now.toLocaleDateString('id-ID', opsi);
+                document.getElementById('top-live-time').innerText = now.toTimeString().split(' ')[0];
+            }, 1000);
+        }
 
-function parseCSV(text) {
-  const lines = text.split('\n').map(line => line.split(','));
-  const headers = lines[0].map(h => h.trim().replace(/"/g, ''));
-  const result = [];
-  
-  for(let i=1; i<lines.length; i++) {
-    if(!lines[i] || lines[i].length < headers.length) continue;
-    const obj = {};
-    headers.forEach((header, index) => {
-      obj[header] = lines[i][index] ? lines[i][index].trim().replace(/"/g, '') : '';
-    });
-    if(Object.values(obj).some(v => v !== '')) result.push(obj);
-  }
-  return result;
-}
+        function getWeekKeyFromDate(dateObj) {
+            const d = new Date(dateObj);
+            d.setDate(d.getDate() - d.getDay());
+            return d.toISOString().split('T')[0];
+        }
 
-function getRankClass(rank) {
-  if(!rank) return 'rank-default';
-  const r = rank.toLowerCase().trim();
-  if(r.includes('head')) return 'rank-head';
-  if(r.includes('deputy')) return 'rank-deputy';
-  if(r.includes('secretariat')) return 'rank-secretariat';
-  if(r.includes('dokter') || r.includes('spesialis')) return 'rank-dokter';
-  if(r.includes('pmd') || r.includes('paramedic')) return 'rank-pmd';
-  if(r.includes('emt')) return 'rank-emt';
-  return 'rank-default';
-}
+        // --- 3. FETCH DATA ENGINE: JALUR LIVE STREAMING GOOGLE SHEETS ---
+        function fetchGoogleSheetsCloudData(forceRender = false) {
+            Promise.all([
+                fetch(CSV_ABSEN_URL + '&cachebust=' + Date.now()).then(res => res.text()), 
+                fetch(CSV_ANGGOTA_URL + '&cachebust=' + Date.now()).then(res => res.text())
+            ])
+            .then(([csvAbsen, csvAnggota]) => {
+                if (!forceRender && csvAbsen === lastFetchedAbsenRaw && csvAnggota === lastFetchedAnggotaRaw) {
+                    return; 
+                }
+                
+                lastFetchedAbsenRaw = csvAbsen;
+                lastFetchedAnggotaRaw = csvAnggota;
 
-function renderTeamList(anggotaList) {
-  const container = document.getElementById('teamListContainer');
-  container.innerHTML = '';
-  if(anggotaList.length === 0) {
-    container.innerHTML = '<div style="color:var(--muted); font-size:0.8rem; text-align:center;">Belum ada anggota resmi terdaftar.</div>';
-    return;
-  }
-  
-  const hirarkiOrder = ['head of ems', 'deputy of ems', 'secretariat', 'dokter', 'dokter spesialis', 'pmd', 'paramedic', 'emt'];
-  
-  let sortedList = [...anggotaList].sort((a, b) => {
-    let rA = (a['Jabatan'] || 'EMT').toLowerCase().trim();
-    let rB = (b['Jabatan'] || 'EMT').toLowerCase().trim();
-    let idxA = hirarkiOrder.indexOf(rA);
-    let idxB = hirarkiOrder.indexOf(rB);
-    if (idxA === -1) idxA = 999;
-    if (idxB === -1) idxB = 999;
-    return idxA - idxB;
-  });
+                rawAbsenData = parseCSV(csvAbsen);
+                rawAnggotaData = parseCSV(csvAnggota);
+                
+                userRanks = {};
+                rawAnggotaData.forEach(row => {
+                    if(row['Nama Anggota']) {
+                        userRanks[row['Nama Anggota']] = row['Jabatan'] || 'EMT';
+                    }
+                });
 
-  sortedList.forEach((member) => {
-    if(!member['Nama Anggota']) return;
-    const rank = member['Jabatan'] || 'EMT';
-    const rankClass = getRankClass(rank);
-    container.innerHTML += `
-      <div class="team-item">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <strong>${member['Nama Anggota']}</strong>
-          <span class="member-badge ${rankClass}" style="font-size:0.65rem;">${rank}</span>
-        </div>
-      </div>`;
-  });
-}
+                renderStafPanelList();
+                renderRankHierarchyList();
+                renderWeeklyMemberCards();
+                
+                const statusBadge = document.getElementById('syncStatus');
+                statusBadge.innerText = "🟢 Terhubung Cloud";
+                statusBadge.className = "text-xs font-mono-custom text-emsCyan";
+            })
+            .catch(err => {
+                console.error(err);
+                const statusBadge = document.getElementById('syncStatus');
+                statusBadge.innerText = "🔴 Sirkuit Terputus";
+                statusBadge.className = "text-xs font-mono-custom text-red-500";
+            });
+        }
 
-function processAndRender() {
-  const selectedWeek = document.getElementById('weekStart').value;
-  const searchQuery = document.getElementById('searchName').value.toLowerCase().trim();
-  
-  let currentTreat = document.getElementById('priceTreatment').value;
-  let currentPing = document.getElementById('pricePingsan').value;
-  let currentAlpra = document.getElementById('priceAlprazolam').value;
+        function parseCSV(text) {
+            const lines = text.split('\n').map(line => line.split(','));
+            const headers = lines[0].map(h => h.trim().replace(/"/g, ''));
+            const result = [];
+            
+            for(let i=1; i<lines.length; i++) {
+                if(!lines[i] || lines[i].length < headers.length) continue;
+                const obj = {};
+                headers.forEach((header, index) => {
+                    obj[header] = lines[i][index] ? lines[i][index].trim().replace(/"/g, '') : '';
+                });
+                if(Object.values(obj).some(v => v !== '')) result.push(obj);
+            }
+            return result;
+        }
 
-  if (document.activeElement === document.getElementById('priceTreatment') && currentTreat !== '') {
-    localStorage.setItem('zhagi_treat', currentTreat);
-  }
-  if (document.activeElement === document.getElementById('pricePingsan') && currentPing !== '') {
-    localStorage.setItem('zhagi_ping', currentPing);
-  }
-  if (document.activeElement === document.getElementById('priceAlprazolam') && currentAlpra !== '') {
-    localStorage.setItem('zhagi_alpra', currentAlpra);
-  }
+        // --- 4. DATA CONFIG TARIF MANAGEMENT ---
+        function saveServiceRates() {
+            const activeWeekKey = getWeekKeyFromDate(new Date(document.getElementById('rekap-filter-date').value));
+            hargaLayananHistory[activeWeekKey] = {
+                treatment: parseFloat(document.getElementById('cfg-price-treat').value) || 0,
+                pingsan: parseFloat(document.getElementById('cfg-price-pingsan').value) || 0,
+                alprazolam: parseFloat(document.getElementById('cfg-price-alpra').value) || 0
+            };
+            localStorage.setItem('vrp_harga_history', JSON.stringify(hargaLayananHistory));
+            renderWeeklyMemberCards();
+        }
 
-  const rateTreatment = localStorage.getItem('zhagi_treat') ? parseFloat(localStorage.getItem('zhagi_treat')) : 35;
-  const ratePingsan = localStorage.getItem('zhagi_ping') ? parseFloat(localStorage.getItem('zhagi_ping')) : 45;
-  const rateAlprazolam = localStorage.getItem('zhagi_alpra') ? parseFloat(localStorage.getItem('zhagi_alpra')) : 50;
+        function loadCurrentWeekRatesIntoInputs() {
+            const activeWeekKey = getWeekKeyFromDate(new Date(document.getElementById('rekap-filter-date').value));
+            const cfg = hargaLayananHistory[activeWeekKey] || { treatment: 35, pingsan: 45, alprazolam: 50 };
+            document.getElementById('cfg-price-treat').value = cfg.treatment;
+            document.getElementById('cfg-price-pingsan').value = cfg.pingsan;
+            document.getElementById('cfg-price-alpra').value = cfg.alprazolam;
+        }
 
-  document.getElementById('priceTreatment').value = rateTreatment;
-  document.getElementById('pricePingsan').value = ratePingsan;
-  document.getElementById('priceAlprazolam').value = rateAlprazolam;
-  
-  const container = document.getElementById('membersContainer');
-  const tbody = document.getElementById('summaryBody');
-  
-  container.innerHTML = '';
-  tbody.innerHTML = '';
-  
-  // ⚔️ BARIKADE FILTER KEBAL EROR: Mengawinkan format Bot (YYYY-MM-DD) dan membersihkan data petik hantu
-  let filtered = rawAbsenData.filter(row => {
-    if (!row['Minggu Kontrak']) return false;
-    
-    const tglSheet = row['Minggu Kontrak'].replace(/'/g, "").trim(); 
-    
-    // Jika data di sheet berformat DD/MM/YYYY, konversikan input kalender web (YYYY-MM-DD) agar seimbang
-    if (tglSheet.includes('/')) {
-      if (!selectedWeek) return false;
-      const [yyyy, mm, dd] = selectedWeek.split('-');
-      return tglSheet === `${dd}/${mm}/${yyyy}`;
-    }
-    
-    return tglSheet === selectedWeek;
-  });
+        function getRateForWeek(weekKey, type) {
+            const fallback = { treatment: 35, pingsan: 45, alprazolam: 50 };
+            return (hargaLayananHistory[weekKey] && hargaLayananHistory[weekKey][type] !== undefined) ? hargaLayananHistory[weekKey][type] : fallback[type];
+        }
 
-  if(searchQuery !== '') {
-    filtered = filtered.filter(row => row['Nama Anggota'] && row['Nama Anggota'].toLowerCase().includes(searchQuery));
-  }
-  
-  const grouped = {};
-  filtered.forEach(row => {
-    const name = row['Nama Anggota'];
-    if(!name) return;
-    if(!grouped[name]) grouped[name] = { name: name, days: {} };
-    
-    // Cegah data bot 'N/A' merusak struktur visual papan nama hari
-    let hari = row['Hari'] ? row['Hari'].trim() : 'Minggu';
-    if (hari === 'N/A' || hari === '') hari = 'Minggu'; 
-    
-    if(!grouped[name].days[hari]) grouped[name].days[hari] = [];
-    
-    grouped[name].days[hari].push({
-      startTime: row['Jam Masuk'],
-      endTime: row['Jam Keluar'],
-      treatment: parseInt(row['Treatment']) || 0,
-      pingsan: parseInt(row['Pingsan']) || 0,
-      alprazolam: parseInt(row['Alprazolam']) || 0
-    });
-  });
+        // --- 5. CALCULATION ENGINE LOGISTICS ---
+        function calculateDutyHours(inTime, outTime) {
+            if(!inTime || !outTime || !inTime.includes(':') || !outTime.includes(':')) return 0;
+            const [sH, sM] = inTime.split(':').map(Number);
+            const [eH, eM] = outTime.split(':').map(Number);
+            let diff = (eH * 60 + eM) - (sH * 60 + sM);
+            if (diff < 0) diff += 1440;
+            return diff / 60;
+        }
 
-  const names = Object.keys(grouped);
-  if (names.length === 0) {
-    container.innerHTML = '<div style="text-align:center; color:var(--muted); padding:30px; background:var(--surface); border-radius:14px; border:1px solid var(--border);">Tidak ada record absen minggu ini.</div>';
-    if(mainChart) mainChart.destroy();
-    return;
-  }
+        // --- 6. RENDER DATA LOG VIEWS CONTROLLER ---
+        function renderMainTableLogs(filteredLogs, rTreat, rPingsan, rAlpra) {
+            const query = document.getElementById('table-search-query').value.toLowerCase().trim();
+            const tbody = document.getElementById('main-table-log-body');
+            tbody.innerHTML = '';
 
-  let chartLabels = [], chartIncomes = [];
-  const HARI_URUTAN = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+            let counter = 1;
+            filteredLogs.forEach(r => {
+                const name = r['Nama Anggota'] || '';
+                const jab = userRanks[name] || r['Jabatan'] || 'EMT';
+                const tgl = r['Minggu Kontrak'] ? r['Minggu Kontrak'].replace(/'/g, "").trim() : '';
+                const hari = (r['Hari'] === 'N/A' || !r['Hari']) ? 'Minggu' : r['Hari'].trim();
+                const masuk = r['Jam Masuk'] || '00:00';
+                const keluar = r['Jam Keluar'] || '00:00';
+                
+                const t = parseInt(r['Treatment']) || 0;
+                const p = parseInt(r['Pingsan']) || 0;
+                const a = parseInt(r['Alprazolam']) || 0;
 
-  names.forEach(name => {
-    const member = grouped[name];
-    let tHours = 0, tTreat = 0, tPing = 0, tAlpra = 0;
-    let daysHtml = '';
+                const matchQuery = !query || name.toLowerCase().includes(query) || jab.toLowerCase().includes(query) || tgl.includes(query);
+                
+                if (matchQuery) {
+                    const totalJam = calculateDutyHours(masuk, keluar);
+                    const totalIncome = (t * rTreat) + (p * rPingsan) + (a * rAlpra);
 
-    HARI_URUTAN.forEach(h => {
-      const records = member.days[h] || [];
-      if(records.length === 0) {
-        daysHtml += `
-          <div class="day-box">
-            <div class="day-name">${h}</div>
-            <div style="color:var(--muted); font-family:'DM Mono'; margin-bottom:3px;">— / —</div>
-            <div style="color:var(--muted); font-size:0.65rem; line-height:1.2;">🟢 T:0 | 🔴 P:0 | 💊 A:0</div>
-          </div>`;
-        return;
-      }
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-white/[0.02] transition">
+                            <td class="p-3 font-mono-custom text-gray-500">${counter++}</td>
+                            <td class="p-3 font-bold text-white">${name}</td>
+                            <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] bg-emsPurple/10 text-emsPurple font-bold border border-emsPurple/20">${jab}</span></td>
+                            <td class="p-3 font-mono-custom">${tgl}</td>
+                            <td class="p-3">${hari}</td>
+                            <td class="p-3 font-mono-custom text-emsCyan">${masuk}</td>
+                            <td class="p-3 font-mono-custom text-emsCyan">${keluar}</td>
+                            <td class="p-3 font-mono-custom text-gray-300">${totalJam.toFixed(1)}h</td>
+                            <td class="p-3 text-center font-mono-custom text-purple-400">${t}</td>
+                            <td class="p-3 text-center font-mono-custom text-orange-400">${p}</td>
+                            <td class="p-3 text-center font-mono-custom text-cyan-400">${a}</td>
+                            <td class="p-3 text-right font-mono-custom text-green-400 font-bold">$${totalIncome.toLocaleString('id-ID')}</td>
+                        </tr>`;
+                }
+            });
+            if(counter === 1) {
+                tbody.innerHTML = `<tr><td colspan="12" class="p-8 text-center text-gray-500 font-mono-custom">Tidak ada record data absen minggu ini yang cocok di Google Sheets.</td></tr>`;
+            }
+        }
 
-      let dayHours = 0, dayTreat = 0, dayPing = 0, dayAlpra = 0;
-      let timeRangesText = [];
+        function renderWeeklyMemberCards() {
+            loadCurrentWeekRatesIntoInputs();
+            const selectedWeek = document.getElementById('rekap-filter-date').value;
+            const container = document.getElementById('weekly-cards-grid-container');
+            container.innerHTML = '';
 
-      records.forEach(d => {
-        if(d.startTime && d.endTime) {
-          const [sH, sM] = d.startTime.split(':').map(Number);
-          const [eH, eM] = d.endTime.split(':').map(Number);
-          let diff = (eH*60+eM) - (sH*60+sM); if(diff<0) diff+=1440;
-          dayHours += (diff/60);
-          tHours += (diff/60);
-        }
-        dayTreat += d.treatment;
-        dayPing += d.pingsan;
-        dayAlpra += d.alprazolam;
-        tTreat += d.treatment;
-        tPing += d.pingsan;
-        tAlpra += d.alprazolam;
-        if(d.startTime && d.endTime) timeRangesText.push(`${d.startTime}-${d.endTime}`);
-      });
+            const rTreat = getRateForWeek(selectedWeek, 'treatment');
+            const rPingsan = getRateForWeek(selectedWeek, 'pingsan');
+            const rAlpra = getRateForWeek(selectedWeek, 'alprazolam');
 
-      let finalTimeText = timeRangesText.length > 0 ? timeRangesText.join('<br>') : '—/—';
-      daysHtml += `
-        <div class="day-box">
-          <div class="day-name">${h}</div>
-          <div style="color:#fff; font-family:'DM Mono'; font-size:0.7rem; margin-bottom:3px; line-height:1.2;">${finalTimeText}</div>
-          <div style="color:var(--accent4); font-size:0.65rem; line-height:1.2; font-weight:600;">⏱️ ${dayHours.toFixed(1)} jam</div>
-          <div style="color:var(--muted); font-size:0.65rem; line-height:1.2; margin-top:2px;">🟢 T:${dayTreat}<br>🔴 P:${dayPing}<br>💊 A:${dayAlpra}</div>
-        </div>`;
-    });
+            // FILTER FILTER DUA ARAH: Mendukung data lama (DD/MM/YYYY) dan data bot baru (YYYY-MM-DD)
+            const filtered = rawAbsenData.filter(row => {
+                if (!row['Minggu Kontrak']) return false;
+                const tglSheet = row['Minggu Kontrak'].replace(/'/g, "").trim(); 
+                if (tglSheet.includes('/')) {
+                    if (!selectedWeek) return false;
+                    const [yyyy, mm, dd] = selectedWeek.split('-');
+                    return tglSheet === `${dd}/${mm}/${yyyy}`;
+                }
+                return tglSheet === selectedWeek;
+            });
 
-    const rank = userRanks[member.name] || 'EMT';
-    const rankClass = getRankClass(rank);
+            // Grouping data per petugas
+            const grouped = {};
+            filtered.forEach(row => {
+                const name = row['Nama Anggota'];
+                if(!name) return;
+                if(!grouped[name]) grouped[name] = { nama: name, logs: {} };
+                
+                let hari = row['Hari'] ? row['Hari'].trim() : 'Minggu';
+                if(hari === 'N/A' || hari === '') hari = 'Minggu';
 
-    const card = document.createElement('div');
-    card.className = 'member-card';
-    card.innerHTML = `
-      <div class="member-top">
-        <span>👤 ${member.name}</span>
-        <span class="member-badge ${rankClass}">${rank}</span>
-      </div>
-      <div class="days-grid">${daysHtml}</div>`;
-    container.appendChild(card);
+                grouped[name].logs[hari] = row;
+            });
 
-    let income = (tTreat * rateTreatment) + (tPing * ratePingsan) + (tAlpra * rateAlprazolam);
-    chartLabels.push(member.name);
-    chartIncomes.push(income);
+            const HARI_URUTAN = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+            const names = Object.keys(grouped);
 
-    tbody.innerHTML += `
-      <tr>
-        <td><strong>${member.name}</strong> <span class="member-badge ${rankClass}" style="font-size:0.65rem; padding:2px 4px;">${rank}</span></td>
-        <td>${tHours.toFixed(1)} jam</td>
-        <td>${tTreat} org</td>
-        <td>${tPing} org</td>
-        <td>${tAlpra} botol</td>
-        <td style="color:var(--accent); font-weight:bold;">$${income}</td>
-        <td><button class="btn-reset-mini" onclick="resetPerPersonFromCloud('${member.name}')">❌ Reset</button></td>
-      </tr>`;
-  });
+            let totalWJam = 0, totalWTreat = 0, totalWPingsan = 0, totalWIncome = 0;
+            let chartLabels = [], chartIncomes = [];
 
-  renderChart(chartLabels, chartIncomes);
-}
+            if(names.length === 0) {
+                container.innerHTML = `<div class="col-span-2 p-8 text-center bg-black/20 rounded-xl border border-emsBorder text-gray-500">Tidak ada record data absen berjalan untuk minggu kontrak ini.</div>`;
+                renderBarChartEngine([], []);
+                document.getElementById('widget-total-duty').innerText = "0.0 Jam";
+                document.getElementById('widget-total-treat').innerText = "0";
+                document.getElementById('widget-total-pingsan').innerText = "0 Kasus";
+                document.getElementById('widget-total-income').innerText = "$0";
+                renderMainTableLogs([], rTreat, rPingsan, rAlpra);
+                return;
+            }
 
-function renderChart(labels, data) {
-  const ctx = document.getElementById('analyticsChart').getContext('2d');
-  if (mainChart) mainChart.destroy();
-  mainChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: labels,
-      datasets: [{ label: 'Total Income ($)', data: data, backgroundColor: 'rgba(79, 255, 176, 0.3)', borderColor: '#4fffb0', borderWidth: 2, borderRadius: 5 }]
-    },
-    options: { 
-      responsive: true, 
-      maintainAspectRatio: false, 
-      animation: false, 
-      scales: { 
-        y: { grid: { color: '#2a3045' }, ticks: { color: '#6b7490' } }, 
-        x: { grid: { display: false }, ticks: { color: '#6b7490' } } 
-      }, 
-      plugins: { legend: { labels: { color: '#e8eaf0', font: { family: 'Syne' } } } } 
-    }
-  });
-}
+            names.forEach(name => {
+                const item = grouped[name];
+                const jab = userRanks[name] || 'EMT';
+                let daysHtml = '';
+                let mDuty = 0, mTreat = 0, mPing = 0, mAlpra = 0;
 
-function exportToExcel() {
-  const week = document.getElementById('weekStart').value;
-  const table = document.getElementById('reportTable');
-  const wb = XLSX.utils.table_to_book(table, { sheet: "Rekap Absensi" });
-  XLSX.writeFile(wb, `Rekap_Absensi_EMS_Valoria_Minggu_${week}.xlsx`);
-}
+                HARI_URUTAN.forEach(hari => {
+                    const r = item.logs[hari];
+                    if(r) {
+                        const masuk = r['Jam Masuk'], keluar = r['Jam Keluar'];
+                        const t = parseInt(r['Treatment']) || 0;
+                        const p = parseInt(r['Pingsan']) || 0;
+                        const a = parseInt(r['Alprazolam']) || 0;
+                        const hours = calculateDutyHours(masuk, keluar);
 
-function exportToPDF() {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-  const week = document.getElementById('weekStart').value;
-  
-  doc.setFont("Helvetica", "bold");
-  doc.text("LAPORAN REKAPITULASI JABATAN & INCOME EMS VALORIA", 14, 15);
-  doc.setFontSize(10);
-  doc.setFont("Helvetica", "normal");
-  doc.text(`Periode Kontrak Minggu: ${week}`, 14, 22);
-  
-  doc.autoTable({
-    html: '#reportTable',
-    startY: 28,
-    theme: 'striped',
-    headStyles: { fillColor: [22, 26, 35] },
-    styles: { fontSize: 8 }
-  });
-  
-  doc.save(`Laporan_EMS_Valoria_Minggu_${week}.pdf`);
-}
-</script>
+                        mDuty += hours; mTreat += t; mPing += p; mAlpra += a;
+                        totalWJam += hours; totalWTreat += t; totalWPingsan += p;
+
+                        daysHtml += `
+                            <div class="bg-black/40 p-2 rounded-xl border border-emsPurple/30 flex flex-col justify-between text-center min-h-[90px]">
+                                <p class="text-[10px] text-emsCyan font-bold uppercase">${hari}</p>
+                                <p class="text-[10px] font-mono-custom text-white font-bold my-1">${masuk}-${keluar}</p>
+                                <p class="text-[9px] font-mono-custom text-gray-400">⏱️ ${hours.toFixed(1)}h</p>
+                                <p class="text-[8px] font-mono-custom text-gray-500">T:${t} P:${p} A:${a}</p>
+                            </div>`;
+                    } else {
+                        daysHtml += `
+                            <div class="bg-black/10 p-2 rounded-xl border border-emsBorder/40 flex flex-col justify-center text-center text-gray-600 min-h-[90px]">
+                                <p class="text-[10px] uppercase font-bold text-gray-600">${hari}</p>
+                                <p class="text-xs my-1 font-mono-custom">—</p>
+                            </div>`;
+                    }
+                });
+
+                const memberIncome = (mTreat * rTreat) + (mPing * rPingsan) + (mAlpra * rAlpra);
+                totalWIncome += memberIncome;
+
+                chartLabels.push(name);
+                chartIncomes.push(memberIncome);
+
+                container.innerHTML += `
+                    <div class="bg-emsDark p-5 rounded-2xl border border-emsBorder space-y-4 shadow-xl">
+                        <div class="flex justify-between items-center border-b border-emsBorder/60 pb-2">
+                            <div>
+                                <h4 class="font-bold text-white text-sm">👤 ${name}</h4>
+                                <span class="text-[9px] px-2 py-0.5 rounded bg-emsCyan/10 text-emsCyan border border-emsCyan/20 font-bold uppercase">${jab}</span>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-[9px] text-gray-400 uppercase font-mono-custom">Accumulated Pay</p>
+                                <p class="text-base font-bold text-green-400 font-mono-custom">$${memberIncome.toLocaleString('id-ID')}</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-4 sm:grid-cols-7 gap-1.5">${daysHtml}</div>
+                    </div>`;
+            });
+
+            // Update Widgets
+            document.getElementById('widget-total-duty').innerText = `${totalWJam.toFixed(1)} Jam`;
+            document.getElementById('widget-total-treat').innerText = totalWTreat;
+            document.getElementById('widget-total-pingsan').innerText = `${totalWPingsan} Kasus`;
+            document.getElementById('widget-total-income').innerText = `$${totalWIncome.toLocaleString('id-ID')}`;
+
+            renderBarChartEngine(chartLabels, chartIncomes);
+            renderMainTableLogs(filtered, rTreat, rPingsan, rAlpra);
+        }
+
+        function renderBarChartEngine(labels, data) {
+            const ctx = document.getElementById('chart-rekap-batang').getContext('2d');
+            if(mainChart) mainChart.destroy();
+            mainChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{ label: 'Total Akumulasi Income ($)', data: data, backgroundColor: 'rgba(108, 92, 231, 0.3)', borderColor: '#00cec9', borderWidth: 2, borderRadius: 8 }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { grid: { color: '#222533' }, ticks: { color: '#6b7490', font: { family: 'DM Mono' } } },
+                        x: { grid: { display: false }, ticks: { color: '#6b7490' } }
+                    },
+                    plugins: { legend: { labels: { color: '#fff', font: { family: 'Syne' } } } }
+                }
+            });
+        }
+
+        function renderStafPanelList() {
+            const tbody = document.getElementById('staf-panel-table-body');
+            tbody.innerHTML = '';
+            
+            let counter = 1;
+            let sorted = [...rawAnggotaData].sort((a,b) => jabatanData.indexOf(a['Jabatan']) - jabatanData.indexOf(b['Jabatan']));
+
+            sorted.forEach(staf => {
+                const name = staf['Nama Anggota'];
+                const jab = staf['Jabatan'] || 'EMT';
+                if(name) {
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-white/[0.02]">
+                            <td class="p-3 font-mono-custom text-gray-500">${counter++}</td>
+                            <td class="p-3 font-bold text-white">${name}</td>
+                            <td class="p-3"><span class="px-2 py-0.5 text-[10px] font-bold bg-emsCyan/10 text-emsCyan border border-emsCyan/20 rounded uppercase">${jab}</span></td>
+                        </tr>`;
+                }
+            });
+        }
+
+        function renderRankHierarchyList() {
+            const container = document.getElementById('rank-drag-container');
+            container.innerHTML = '';
+            jabatanData.forEach((jab, index) => {
+                container.innerHTML += `
+                    <div class="flex items-center justify-between p-3.5 bg-black/40 border border-emsBorder rounded-xl">
+                        <div class="flex items-center gap-3">
+                            <span class="font-mono-custom text-xs text-gray-500">#0${index+1}</span>
+                            <span class="font-bold text-sm text-white tracking-wide">${jab}</span>
+                        </div>
+                        <span class="text-[10px] text-gray-600 font-mono-custom">Default Level</span>
+                    </div>`;
+            });
+        }
+
+        function clearLogsFilter() {
+            document.getElementById('table-search-query').value = '';
+            renderWeeklyMemberCards();
+        }
+
+        function exportToExcelVRP() {
+            const targetWeekKey = document.getElementById('rekap-filter-date').value;
+            const table = document.getElementById('reportTable');
+            const wb = XLSX.utils.table_to_book(table, { sheet: "Rekap" });
+            XLSX.writeFile(wb, `Rekap_EMSVRP_Minggu_${targetWeekKey}.xlsx`);
+        }
+
+        function exportToPDFVRP() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const targetWeekKey = document.getElementById('rekap-filter-date').value;
+
+            doc.setFont("Helvetica", "bold");
+            doc.text("LAPORAN REKAPITULASI DATA ABSENSI EMSVRP", 14, 15);
+            doc.setFontSize(10);
+            doc.text(`Periode Minggu Kontrak: ${targetWeekKey}`, 14, 22);
+
+            const filtered = rawAbsenData.filter(row => {
+                if (!row['Minggu Kontrak']) return false;
+                const tglSheet = row['Minggu Kontrak'].replace(/'/g, "").trim(); 
+                if (tglSheet.includes('/')) {
+                    const [yyyy, mm, dd] = targetWeekKey.split('-');
+                    return tglSheet === `${dd}/${mm}/${yyyy}`;
+                }
+                return tglSheet === targetWeekKey;
+            });
+
+            const rows = filtered.map((r, i) => [
+                i+1, r['Nama Anggota'], userRanks[r['Nama Anggota']] || 'EMT', r['Minggu Kontrak'], r['Hari'], r['Jam Masuk'], r['Jam Keluar'], r['Treatment'], r['Pingsan'], r['Alprazolam']
+            ]);
+
+            doc.autoTable({
+                head: [['No', 'Nama', 'Jabatan', 'Minggu Kontrak', 'Hari', 'Masuk', 'Keluar', 'T', 'P', 'A']],
+                body: rows,
+                startY: 28,
+                theme: 'grid',
+                headStyles: { fillColor: [108, 92, 231] }
+            });
+
+            doc.save(`Laporan_EMSVRP_${targetWeekKey}.pdf`);
+        }
+    </script>
 </body>
 </html>
