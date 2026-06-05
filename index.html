@@ -1,559 +1,1204 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
-<title>Sistem Absensi Analytics LIVE GOOGLE SHEETS</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DATA ABSENSI EMSVRP - Emergency Medical Service Valoria</title>
+    <!-- Tailwind CSS CDN untuk layouting modular -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js, XLSX, Docx, JSPDF untuk modul rekap & ekspor -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+    <!-- Font Syne & DM Mono -->
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@500;700;800&display=swap" rel="stylesheet">
 
-<style>
-:root { --bg: #0d0f14; --surface: #161a23; --surface2: #1e2330; --border: #2a3045; --accent: #4fffb0; --accent4: #74b9ff; --text: #e8eaf0; --muted: #6b7490; --danger: #ff7675; --warning: #ffeaa7; }
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; padding: 24px 16px; }
-.header { text-align: center; margin-bottom: 24px; }
-.header h1 { font-size: 2.2rem; background: linear-gradient(135deg,var(--accent),var(--accent4)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800; }
-
-.control-panel, .management-panel { background: var(--surface); padding: 20px; border-radius: 16px; border: 1px solid var(--border); margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; }
-.management-panel { border-color: var(--accent4); background: linear-gradient(180deg, var(--surface) 0%, rgba(116,185,255,0.03) 100%); }
-.control-group { display: flex; flex-direction: column; gap: 5px; }
-.control-group label { font-size: 0.75rem; color: var(--muted); font-weight: 600; }
-.control-input { background: var(--bg); border: 1px solid var(--border); color: #fff; padding: 10px 14px; border-radius: 8px; font-family: 'Syne', sans-serif; font-size: 0.85rem; outline: none; min-width: 140px; }
-.control-input:focus { border-color: var(--accent); }
-.status-badge { background: rgba(79,255,176,0.1); color: var(--accent); padding: 8px 14px; border-radius: 8px; font-family: 'DM Mono', monospace; font-size: 0.8rem; margin-left: auto; align-self: center; }
-
-.btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
-.btn { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 10px 14px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 6px; transition: all 0.2s; }
-.btn:hover { border-color: var(--accent); background: rgba(79,255,176,0.05); }
-.btn-primary { border-color: var(--accent4); color: var(--accent4); }
-.btn-primary:hover { background: rgba(116,185,255,0.1); }
-.btn-excel:hover { border-color: #2ecc71; color: #2ecc71; }
-.btn-pdf:hover { border-color: #e74c3c; color: #e74c3c; }
-.btn-danger { border-color: var(--danger); color: var(--danger); }
-.btn-danger:hover { background: rgba(255,118,117,0.1); }
-.btn-reset-mini { padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; background: rgba(255,118,117,0.1); border: 1px solid var(--danger); color: var(--danger); cursor: pointer; }
-.btn-reset-mini:hover { background: var(--danger); color: #fff; }
-
-.price-box { border-left: 2px solid var(--border); padding-left: 20px; display: flex; flex-wrap: wrap; gap: 12px; }
-
-.dashboard-layout { display: grid; grid-template-columns: 1fr 320px; gap: 24px; }
-@media (max-width: 1100px) { .dashboard-layout { grid-template-columns: 1fr; .price-box { border-left: none; padding-left: 0; } } }
-.member-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; margin-bottom: 14px; padding: 15px; }
-.member-top { display: flex; justify-content: space-between; align-items: center; font-weight: 700; margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 8px; color: #fff; }
-.member-badge { font-size: 0.7rem; padding: 4px 8px; border-radius: 6px; text-transform: uppercase; font-family: 'DM Mono', monospace; }
-
-.days-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
-.day-box { background: var(--surface2); padding: 8px; border-radius: 8px; font-size: 0.75rem; border: 1px solid rgba(42,48,69,0.5); }
-.day-name { color: var(--accent4); font-weight: bold; margin-bottom: 4px; }
-.summary-table { width: 100%; border-collapse: collapse; margin-top: 24px; background: var(--surface); border-radius: 12px; overflow: hidden; border: 1px solid var(--border); }
-.summary-table th, .summary-table td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
-.summary-table th { background: var(--surface2); color: var(--muted); font-weight: 600; }
-.chart-section { background: var(--surface); padding: 20px; border-radius: 16px; border: 1px solid var(--border); margin-top: 24px; height: 320px; }
-
-.sidebar-panel { background: var(--surface); padding: 20px; border-radius: 16px; border: 1px solid var(--border); height: fit-content; }
-.sidebar-title { font-size: 1rem; font-weight: 700; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 8px; color: var(--accent4); }
-.team-list { display: flex; flex-direction: column; gap: 10px; font-size: 0.85rem; }
-.team-item { background: var(--surface2); padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(42,48,69,0.3); display: flex; flex-direction: column; gap: 4px; }
-
-/* 🎨 PEWARNAAN BADGE JABATAN RESMI VALORIA */
-.rank-head { background: rgba(255,118,117,0.15); color: #ff7675; border: 1px solid #ff7675; }
-.rank-deputy { background: rgba(255,168,1,0.15); color: #ffa801; border: 1px solid #ffa801; }
-.rank-secretariat { background: rgba(255,118,243,0.15); color: #ff76f3; border: 1px solid #ff76f3; }
-.rank-dokter { background: rgba(116,185,255,0.15); color: #74b9ff; border: 1px solid #74b9ff; }
-.rank-pmd { background: rgba(162,155,254,0.15); color: #a29bfe; border: 1px solid #a29bfe; }
-.rank-emt { background: rgba(85,239,196,0.15); color: #55efc4; border: 1px solid #55efc4; }
-.rank-default { background: rgba(107,116,144,0.15); color: #6b7490; border: 1px solid #6b7490; }
-</style>
-</head>
-<body>
-
-<div class="header">
-  <h1>⚡ Dashboard Absensi Cloud Valoria</h1>
-  <p style="color: var(--muted); font-size: 0.85rem; margin-top: 5px; font-family: 'DM Mono', monospace;">REKAP, RESET & MANAGEMENT STRUKTUR CLOUD SYSTEM</p>
-</div>
-
-<div class="management-panel">
-  <div class="control-group">
-    <label style="color: var(--accent4);">🛠️ INPUT NAMA ANGGOTA:</label>
-    <input type="text" id="newMemberName" class="control-input" placeholder="Nama Lengkap...">
-  </div>
-  <div class="control-group">
-    <label style="color: var(--accent4);">📋 PILIH JABATAN PANGKAT:</label>
-    <select id="selectRank" class="control-input" onchange="toggleCustomRankInput()">
-      <option value="HEAD OF EMS">HEAD OF EMS</option>
-      <option value="DEPUTY OF EMS">DEPUTY OF EMS</option>
-      <option value="SECRETARIAT">SECRETARIAT</option>
-      <option value="DOKTER">DOKTER</option>
-      <option value="PMD">PMD</option>
-      <option value="EMT">EMT</option>
-      <option value="KUSTOM">-- Tulis Jabatan Kustom --</option>
-    </select>
-  </div>
-  <div class="control-group" id="customRankGroup" style="display: none;">
-    <label style="color: var(--danger);">✍️ NAMA JABATAN KUSTOM:</label>
-    <input type="text" id="customRankName" class="control-input" placeholder="Ketik pangkat baru...">
-  </div>
-  <div class="control-group">
-    <button class="btn btn-primary" id="btnSaveMember" onclick="addMemberToCloud()">➕ Simpan Ke Cloud</button>
-  </div>
-</div>
-
-<div class="control-panel">
-  <div class="control-group">
-    <label>PILIH MINGGU REKAP:</label>
-    <input type="date" id="weekStart" class="control-input" style="font-family: 'DM Mono', monospace;" onchange="processAndRender()">
-  </div>
-  
-  <div class="control-group">
-    <label>CARI NAMA ANGGOTA:</label>
-    <input type="text" id="searchName" class="control-input" placeholder="Ketik nama tim..." oninput="processAndRender()">
-  </div>
-
-  <div class="price-box">
-    <div class="control-group">
-      <label>💰 TREATMENT ($):</label>
-      <input type="number" id="priceTreatment" class="control-input" value="35" style="width: 75px; min-width: 75px; font-family: 'DM Mono';" oninput="processAndRender()">
-    </div>
-    <div class="control-group">
-      <label>💰 PINGSAN ($):</label>
-      <input type="number" id="pricePingsan" class="control-input" value="45" style="width: 75px; min-width: 75px; font-family: 'DM Mono';" oninput="processAndRender()">
-    </div>
-    <div class="control-group">
-      <label>💊 ALPRAZOLAM ($):</label>
-      <input type="number" id="priceAlprazolam" class="control-input" value="50" style="width: 75px; min-width: 75px; font-family: 'DM Mono';" oninput="processAndRender()">
-    </div>
-  </div>
-
-  <div class="control-group" style="margin-left: 5px;">
-    <div class="btn-group">
-      <button class="btn btn-excel" onclick="exportToExcel()">📊 Excel</button>
-      <button class="btn btn-pdf" onclick="exportToPDF()">📑 PDF</button>
-      <button class="btn btn-danger" id="btnResetAll" onclick="resetAllDataFromCloud()">⚠️ Reset Semua</button>
-    </div>
-  </div>
-
-  <div class="status-badge" id="syncStatus">🔄 Menghubungkan...</div>
-</div>
-
-<div class="dashboard-layout">
-  <div>
-    <div id="membersContainer"></div>
-
-    <table class="summary-table" id="reportTable">
-      <thead>
-        <tr><th>Nama Anggota</th><th>Total Jam</th><th>Treatment</th><th>Pingsan</th><th>Alprazolam</th><th>Total Income</th><th>Aksi</th></tr>
-      </thead>
-      <tbody id="summaryBody"></tbody>
-    </table>
-
-    <div class="chart-section"><canvas id="analyticsChart"></canvas></div>
-  </div>
-
-  <div class="sidebar-panel">
-    <div class="sidebar-title">📋 Struktur Organisasi EMS Resmi</div>
-    <div id="teamListContainer" class="team-list">
-      <div style="color:var(--muted); font-size:0.8rem; text-align:center;">Memuat struktur jabatan...</div>
-    </div>
-  </div>
-</div>
-
-<script>
-// --- ✅ JEMBATAN LIVE CLOUD SAKTI ASLI PUNYA ZHAGI ---
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyvM5hPjWdxvldqQofNSQ_2tUf8qLrkeDOCfaUbUx036edUvgoEE7XnoQ6PPG5xCm2-Tg/exec';
-
-const CSV_ABSEN_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQdcWhromy0EiLziCHqBFVXGEerb4FFwdOy2pq7LPus9z5fet0tHJFzmC_xvWxh96MzRIPOWWtJa3Jm/pub?gid=0&single=true&output=csv';
-const CSV_ANGGOTA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQdcWhromy0EiLziCHqBFVXGEerb4FFwdOy2pq7LPus9z5fet0tHJFzmC_xvWxh96MzRIPOWWtJa3Jm/pub?gid=422470466&single=true&output=csv';
-
-let rawAbsenData = [];
-let rawAnggotaData = [];
-let lastFetchedAbsenRaw = "";    
-let lastFetchedAnggotaRaw = "";  
-let mainChart = null;
-let userRanks = {};
-
-window.addEventListener('load', () => {
-  const sun = new Date(); sun.setDate(sun.getDate() - sun.getDay());
-  document.getElementById('weekStart').value = sun.toISOString().split('T')[0];
-  
-  if(localStorage.getItem('zhagi_treat')) document.getElementById('priceTreatment').value = localStorage.getItem('zhagi_treat');
-  if(localStorage.getItem('zhagi_ping')) document.getElementById('pricePingsan').value = localStorage.getItem('zhagi_ping');
-  if(localStorage.getItem('zhagi_alpra')) document.getElementById('priceAlprazolam').value = localStorage.getItem('zhagi_alpra');
-
-  fetchGoogleSheetsData(true); 
-  setInterval(() => fetchGoogleSheetsData(false), 15000); 
-});
-
-function toggleCustomRankInput() {
-  document.getElementById('customRankGroup').style.display = (document.getElementById('selectRank').value === 'KUSTOM') ? 'flex' : 'none';
-}
-
-function addMemberToCloud() {
-  const nama = document.getElementById('newMemberName').value.trim();
-  const selectVal = document.getElementById('selectRank').value;
-  const jabatan = (selectVal === 'KUSTOM') ? document.getElementById('customRankName').value.trim() : selectVal;
-  
-  if(!nama || !jabatan) return alert('Nama dan Jabatan wajib diisi!');
-  document.getElementById('btnSaveMember').innerText = "⏳ Menyimpan...";
-  
-  fetch(APPS_SCRIPT_URL, {
-    method: 'POST',
-    mode: 'no-cors',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'add_member', nama: nama, jabatan: jabatan })
-  }).then(() => {
-    alert(`Sukses dikirim! ${nama} resmi menjabat sebagai ${jabatan} di cloud.`);
-    document.getElementById('newMemberName').value = '';
-    document.getElementById('customRankName').value = '';
-    document.getElementById('btnSaveMember').innerText = "➕ Simpan Ke Cloud";
-    fetchGoogleSheetsData(true);
-  }).catch(e => alert('Gagal memproses ke server cloud: ' + e));
-}
-
-function resetPerPersonFromCloud(name) {
-  const week = document.getElementById('weekStart').value;
-  if(!confirm(`Hapus permanen seluruh data baris absen ${name} pada minggu ${week} langsung di Google Sheets?`)) return;
-  
-  document.getElementById('syncStatus').innerText = "⏳ Menghapus Baris Cloud...";
-  fetch(APPS_SCRIPT_URL, {
-    method: 'POST',
-    mode: 'no-cors',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'reset_person', nama: name, week: week })
-  }).then(() => {
-    alert(`Data absen ${name} pada minggu kontrak ini sukses dibersihkan dari server.`);
-    fetchGoogleSheetsData(true);
-  });
-}
-
-function resetAllDataFromCloud() {
-  const week = document.getElementById('weekStart').value;
-  if(!confirm(`⚠️ WARNING SEGERA!\nApakah lo yakin ingin MENGHAPUS TOTAL seluruh baris data absen minggu ${week} langsung dari server Google Sheets?`)) return;
-  
-  document.getElementById('btnResetAll').innerText = "⏳ Wiping cloud...";
-  fetch(APPS_SCRIPT_URL, {
-    method: 'POST',
-    mode: 'no-cors',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'reset_all', week: week })
-  }).then(() => {
-    alert(`Wipe out total sukses! Semua log absen minggu ${week} telah lenyap.`);
-    document.getElementById('btnResetAll').innerText = "⚠️ Reset Semua";
-    fetchGoogleSheetsData(true);
-  });
-}
-
-function fetchGoogleSheetsData(forceRender = false) {
-  Promise.all([
-    fetch(CSV_ABSEN_URL + '&cachebust=' + Date.now()).then(res => res.text()), 
-    fetch(CSV_ANGGOTA_URL + '&cachebust=' + Date.now()).then(res => res.text())
-  ])
-  .then(([csvAbsen, csvAnggota]) => {
-    if (!forceRender && csvAbsen === lastFetchedAbsenRaw && csvAnggota === lastFetchedAnggotaRaw) {
-      return; 
-    }
-    
-    lastFetchedAbsenRaw = csvAbsen;
-    lastFetchedAnggotaRaw = csvAnggota;
-
-    rawAbsenData = parseCSV(csvAbsen);
-    rawAnggotaData = parseCSV(csvAnggota);
-    
-    userRanks = {};
-    rawAnggotaData.forEach(row => {
-      if(row['Nama Anggota']) {
-        userRanks[row['Nama Anggota']] = row['Jabatan'] || 'EMT';
-      }
-    });
-
-    renderTeamList(rawAnggotaData);
-    processAndRender();
-    
-    document.getElementById('syncStatus').innerText = "🟢 Terhubung ke Google Cloud";
-    document.getElementById('syncStatus').style.color = "var(--accent)";
-  })
-  .catch(err => {
-    console.error("Eror sinkronisasi data:", err);
-    document.getElementById('syncStatus').innerText = "🔴 Sinkronisasi Terputus";
-    document.getElementById('syncStatus').style.color = "var(--danger)";
-  });
-}
-
-function parseCSV(text) {
-  const lines = text.split('\n').map(line => line.split(','));
-  const headers = lines[0].map(h => h.trim().replace(/"/g, ''));
-  const result = [];
-  
-  for(let i=1; i<lines.length; i++) {
-    if(!lines[i] || lines[i].length < headers.length) continue;
-    const obj = {};
-    headers.forEach((header, index) => {
-      obj[header] = lines[i][index] ? lines[i][index].trim().replace(/"/g, '') : '';
-    });
-    if(Object.values(obj).some(v => v !== '')) result.push(obj);
-  }
-  return result;
-}
-
-function getRankClass(rank) {
-  if(!rank) return 'rank-default';
-  const r = rank.toLowerCase().trim();
-  if(r.includes('head')) return 'rank-head';
-  if(r.includes('deputy')) return 'rank-deputy';
-  if(r.includes('secretariat')) return 'rank-secretariat';
-  if(r.includes('dokter') || r.includes('spesialis')) return 'rank-dokter';
-  if(r.includes('pmd') || r.includes('paramedic')) return 'rank-pmd';
-  if(r.includes('emt')) return 'rank-emt';
-  return 'rank-default';
-}
-
-function renderTeamList(anggotaList) {
-  const container = document.getElementById('teamListContainer');
-  container.innerHTML = '';
-  if(anggotaList.length === 0) {
-    container.innerHTML = '<div style="color:var(--muted); font-size:0.8rem; text-align:center;">Belum ada anggota resmi terdaftar.</div>';
-    return;
-  }
-  
-  const hirarkiOrder = ['head of ems', 'deputy of ems', 'secretariat', 'dokter', 'dokter spesialis', 'pmd', 'paramedic', 'emt'];
-  
-  let sortedList = [...anggotaList].sort((a, b) => {
-    let rA = (a['Jabatan'] || 'EMT').toLowerCase().trim();
-    let rB = (b['Jabatan'] || 'EMT').toLowerCase().trim();
-    let idxA = hirarkiOrder.indexOf(rA);
-    let idxB = hirarkiOrder.indexOf(rB);
-    if (idxA === -1) idxA = 999;
-    if (idxB === -1) idxB = 999;
-    return idxA - idxB;
-  });
-
-  sortedList.forEach((member) => {
-    if(!member['Nama Anggota']) return;
-    const rank = member['Jabatan'] || 'EMT';
-    const rankClass = getRankClass(rank);
-    container.innerHTML += `
-      <div class="team-item">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <strong>${member['Nama Anggota']}</strong>
-          <span class="member-badge ${rankClass}" style="font-size:0.65rem;">${rank}</span>
-        </div>
-      </div>`;
-  });
-}
-
-function processAndRender() {
-  const selectedWeek = document.getElementById('weekStart').value;
-  const searchQuery = document.getElementById('searchName').value.toLowerCase().trim();
-  
-  let currentTreat = document.getElementById('priceTreatment').value;
-  let currentPing = document.getElementById('pricePingsan').value;
-  let currentAlpra = document.getElementById('priceAlprazolam').value;
-
-  if (document.activeElement === document.getElementById('priceTreatment') && currentTreat !== '') {
-    localStorage.setItem('zhagi_treat', currentTreat);
-  }
-  if (document.activeElement === document.getElementById('pricePingsan') && currentPing !== '') {
-    localStorage.setItem('zhagi_ping', currentPing);
-  }
-  if (document.activeElement === document.getElementById('priceAlprazolam') && currentAlpra !== '') {
-    localStorage.setItem('zhagi_alpra', currentAlpra);
-  }
-
-  const rateTreatment = localStorage.getItem('zhagi_treat') ? parseFloat(localStorage.getItem('zhagi_treat')) : 35;
-  const ratePingsan = localStorage.getItem('zhagi_ping') ? parseFloat(localStorage.getItem('zhagi_ping')) : 45;
-  const rateAlprazolam = localStorage.getItem('zhagi_alpra') ? parseFloat(localStorage.getItem('zhagi_alpra')) : 50;
-
-  document.getElementById('priceTreatment').value = rateTreatment;
-  document.getElementById('pricePingsan').value = ratePingsan;
-  document.getElementById('priceAlprazolam').value = rateAlprazolam;
-  
-  const container = document.getElementById('membersContainer');
-  const tbody = document.getElementById('summaryBody');
-  
-  container.innerHTML = '';
-  tbody.innerHTML = '';
-  
-  // ⚔️ BARIKADE FILTER KEBAL EROR: Mengawinkan format Bot (YYYY-MM-DD) dan membersihkan data petik hantu
-  let filtered = rawAbsenData.filter(row => {
-    if (!row['Minggu Kontrak']) return false;
-    
-    const tglSheet = row['Minggu Kontrak'].replace(/'/g, "").trim(); 
-    
-    // Jika data di sheet berformat DD/MM/YYYY, konversikan input kalender web (YYYY-MM-DD) agar seimbang
-    if (tglSheet.includes('/')) {
-      if (!selectedWeek) return false;
-      const [yyyy, mm, dd] = selectedWeek.split('-');
-      return tglSheet === `${dd}/${mm}/${yyyy}`;
-    }
-    
-    return tglSheet === selectedWeek;
-  });
-
-  if(searchQuery !== '') {
-    filtered = filtered.filter(row => row['Nama Anggota'] && row['Nama Anggota'].toLowerCase().includes(searchQuery));
-  }
-  
-  const grouped = {};
-  filtered.forEach(row => {
-    const name = row['Nama Anggota'];
-    if(!name) return;
-    if(!grouped[name]) grouped[name] = { name: name, days: {} };
-    
-    // Cegah data bot 'N/A' merusak struktur visual papan nama hari
-    let hari = row['Hari'] ? row['Hari'].trim() : 'Minggu';
-    if (hari === 'N/A' || hari === '') hari = 'Minggu'; 
-    
-    if(!grouped[name].days[hari]) grouped[name].days[hari] = [];
-    
-    grouped[name].days[hari].push({
-      startTime: row['Jam Masuk'],
-      endTime: row['Jam Keluar'],
-      treatment: parseInt(row['Treatment']) || 0,
-      pingsan: parseInt(row['Pingsan']) || 0,
-      alprazolam: parseInt(row['Alprazolam']) || 0
-    });
-  });
-
-  const names = Object.keys(grouped);
-  if (names.length === 0) {
-    container.innerHTML = '<div style="text-align:center; color:var(--muted); padding:30px; background:var(--surface); border-radius:14px; border:1px solid var(--border);">Tidak ada record absen minggu ini.</div>';
-    if(mainChart) mainChart.destroy();
-    return;
-  }
-
-  let chartLabels = [], chartIncomes = [];
-  const HARI_URUTAN = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
-
-  names.forEach(name => {
-    const member = grouped[name];
-    let tHours = 0, tTreat = 0, tPing = 0, tAlpra = 0;
-    let daysHtml = '';
-
-    HARI_URUTAN.forEach(h => {
-      const records = member.days[h] || [];
-      if(records.length === 0) {
-        daysHtml += `
-          <div class="day-box">
-            <div class="day-name">${h}</div>
-            <div style="color:var(--muted); font-family:'DM Mono'; margin-bottom:3px;">— / —</div>
-            <div style="color:var(--muted); font-size:0.65rem; line-height:1.2;">🟢 T:0 | 🔴 P:0 | 💊 A:0</div>
-          </div>`;
-        return;
-      }
-
-      let dayHours = 0, dayTreat = 0, dayPing = 0, dayAlpra = 0;
-      let timeRangesText = [];
-
-      records.forEach(d => {
-        if(d.startTime && d.endTime) {
-          const [sH, sM] = d.startTime.split(':').map(Number);
-          const [eH, eM] = d.endTime.split(':').map(Number);
-          let diff = (eH*60+eM) - (sH*60+sM); if(diff<0) diff+=1440;
-          dayHours += (diff/60);
-          tHours += (diff/60);
+    <style>
+        :root {
+            --purple-main: #6c5ce7;
+            --purple-dark: #a29bfe;
+            --cyan-accent: #00cec9;
+            --bg-dark: #090a0f;
+            --surface-dark: #12141c;
+            --border-color: #222533;
         }
-        dayTreat += d.treatment;
-        dayPing += d.pingsan;
-        dayAlpra += d.alprazolam;
-        tTreat += d.treatment;
-        tPing += d.pingsan;
-        tAlpra += d.alprazolam;
-        if(d.startTime && d.endTime) timeRangesText.push(`${d.startTime}-${d.endTime}`);
-      });
+        body {
+            background-color: var(--bg-dark);
+            color: #e8eaf0;
+            font-family: 'Syne', sans-serif;
+        }
+        .font-mono-custom {
+            font-family: 'DM Mono', monospace;
+        }
+        /* Custom scrollbar untuk daftar staf aktif */
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #12141c; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #6c5ce7; border-radius: 3px; }
+        .active-menu {
+            background: linear-gradient(90deg, rgba(108,92,231,0.2) 0%, rgba(0,206,201,0.05) 100%);
+            border-left: 4px solid var(--cyan-accent);
+            color: #fff;
+        }
+        /* Notifikasi toast wrapper */
+        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        emsPurple: '#6c5ce7',
+                        emsCyan: '#00cec9',
+                        emsDark: '#12141c',
+                        emsBorder: '#222533'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="overflow-x-hidden">
 
-      let finalTimeText = timeRangesText.length > 0 ? timeRangesText.join('<br>') : '—/—';
-      daysHtml += `
-        <div class="day-box">
-          <div class="day-name">${h}</div>
-          <div style="color:#fff; font-family:'DM Mono'; font-size:0.7rem; margin-bottom:3px; line-height:1.2;">${finalTimeText}</div>
-          <div style="color:var(--accent4); font-size:0.65rem; line-height:1.2; font-weight:600;">⏱️ ${dayHours.toFixed(1)} jam</div>
-          <div style="color:var(--muted); font-size:0.65rem; line-height:1.2; margin-top:2px;">🟢 T:${dayTreat}<br>🔴 P:${dayPing}<br>💊 A:${dayAlpra}</div>
-        </div>`;
-    });
+    <!-- Toast Notification Container -->
+    <div id="toast-container"></div>
 
-    const rank = userRanks[member.name] || 'EMT';
-    const rankClass = getRankClass(rank);
+    <div class="flex min-h-screen">
+        <!-- 1. SIDEBAR NAVIGATION PANELS (Mengikuti ChatGPT Image 29 Mei 2026, 21.26.55.png) -->
+        <aside class="w-64 bg-emsDark border-r border-emsBorder flex flex-col justify-between p-4 shrink-0">
+            <div>
+                <div class="flex items-center gap-3 pb-6 mb-6 border-b border-emsBorder">
+                    <div class="w-10 h-10 bg-emsPurple rounded-xl flex items-center justify-center text-xl font-bold text-white shadow-[0_0_15px_rgba(108,92,231,0.5)]">Ω</div>
+                    <div>
+                        <h2 class="font-bold text-sm tracking-wide text-white">EMSVRP</h2>
+                        <p class="text-[10px] text-gray-500 uppercase tracking-widest font-mono-custom">EMS Valoria System</p>
+                    </div>
+                </div>
+                
+                <nav class="space-y-1">
+                    <button onclick="switchTab('dashboard')" id="menu-dashboard" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:text-white transition active-menu">
+                        📊 Dashboard
+                    </button>
+                    <button onclick="switchTab('input-absen')" id="menu-input-absen" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:text-white transition">
+                        ✍️ Input Absensi
+                    </button>
+                    <button onclick="switchTab('rekap-mingguan')" id="menu-rekap-mingguan" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:text-white transition">
+                        📅 Rekap Mingguan
+                    </button>
+                    <button onclick="switchTab('daftar-staf')" id="menu-daftar-staf" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:text-white transition">
+                        👥 Daftar Staf Aktif
+                    </button>
+                    <button onclick="switchTab('struktur-jabatan')" id="menu-struktur-jabatan" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:text-white transition">
+                        🌿 Struktur Jabatan
+                    </button>
+                    <button onclick="switchTab('export-panel')" id="menu-export-panel" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:text-white transition">
+                        💾 Backup & Export
+                    </button>
+                </nav>
+            </div>
 
-    const card = document.createElement('div');
-    card.className = 'member-card';
-    card.innerHTML = `
-      <div class="member-top">
-        <span>👤 ${member.name}</span>
-        <span class="member-badge ${rankClass}">${rank}</span>
-      </div>
-      <div class="days-grid">${daysHtml}</div>`;
-    container.appendChild(card);
+            <div class="p-4 bg-black/30 rounded-2xl border border-emsBorder/60 text-center">
+                <p class="text-[11px] text-gray-500 font-mono-custom">"We Care, We Heal, We're HRMC."</p>
+            </div>
+        </aside>
 
-    let income = (tTreat * rateTreatment) + (tPing * ratePingsan) + (tAlpra * rateAlprazolam);
-    chartLabels.push(member.name);
-    chartIncomes.push(income);
+        <!-- MAIN LAYOUT PANEL -->
+        <main class="flex-1 p-6 overflow-y-auto max-w-[calc(100vw-16rem)]">
+            <!-- TOP STATS HEADER MODULE -->
+            <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+                <div>
+                    <h1 class="text-2xl font-extrabold text-white tracking-tight">DATA ABSENSI EMSVRP</h1>
+                    <p class="text-xs text-emsCyan font-mono-custom">Emergency Medical Service Valoria Center Analytics</p>
+                </div>
+                <div class="flex items-center gap-4 bg-emsDark px-4 py-2 rounded-xl border border-emsBorder">
+                    <div class="text-right">
+                        <p id="top-live-date" class="text-xs text-white font-mono-custom">Memuat tanggal...</p>
+                        <p id="top-live-time" class="text-sm font-bold text-emsPurple font-mono-custom">00:00:00</p>
+                    </div>
+                    <div class="h-8 w-px bg-emsBorder"></div>
+                    <span class="text-xs px-2 py-1 rounded bg-purple-500/10 text-emsPurple font-mono-custom">Dark Mode</span>
+                </div>
+            </header>
 
-    tbody.innerHTML += `
-      <tr>
-        <td><strong>${member.name}</strong> <span class="member-badge ${rankClass}" style="font-size:0.65rem; padding:2px 4px;">${rank}</span></td>
-        <td>${tHours.toFixed(1)} jam</td>
-        <td>${tTreat} org</td>
-        <td>${tPing} org</td>
-        <td>${tAlpra} botol</td>
-        <td style="color:var(--accent); font-weight:bold;">$${income}</td>
-        <td><button class="btn-reset-mini" onclick="resetPerPersonFromCloud('${member.name}')">❌ Reset</button></td>
-      </tr>`;
-  });
+            <!-- ================= TAB: DASHBOARD ================= -->
+            <section id="tab-dashboard" class="tab-content space-y-6">
+                <!-- 4 MAIN OVERVIEW STATS WIDGETS -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-emsDark p-5 rounded-2xl border border-emsBorder flex items-center gap-4 shadow-xl">
+                        <div class="p-3 rounded-xl bg-purple-500/10 text-emsPurple text-2xl">⏱️</div>
+                        <div>
+                            <p class="text-xs text-gray-400 uppercase tracking-wider">Total Duty Minggu Ini</p>
+                            <h3 id="widget-total-duty" class="text-xl font-bold text-white font-mono-custom">0.0 Jam</h3>
+                        </div>
+                    </div>
+                    <div class="bg-emsDark p-5 rounded-2xl border border-emsBorder flex items-center gap-4 shadow-xl">
+                        <div class="p-3 rounded-xl bg-cyan-500/10 text-emsCyan text-2xl">🟢</div>
+                        <div>
+                            <p class="text-xs text-gray-400 uppercase tracking-wider">Total Treatment</p>
+                            <h3 id="widget-total-treat" class="text-xl font-bold text-white font-mono-custom">0</h3>
+                        </div>
+                    </div>
+                    <div class="bg-emsDark p-5 rounded-2xl border border-emsBorder flex items-center gap-4 shadow-xl">
+                        <div class="p-3 rounded-xl bg-orange-500/10 text-orange-400 text-2xl">🔴</div>
+                        <div>
+                            <p class="text-xs text-gray-400 uppercase tracking-wider">Total Pingsan</p>
+                            <h3 id="widget-total-pingsan" class="text-xl font-bold text-white font-mono-custom">0 Penanganan</h3>
+                        </div>
+                    </div>
+                    <div class="bg-emsDark p-5 rounded-2xl border border-emsBorder flex items-center gap-4 shadow-xl">
+                        <div class="p-3 rounded-xl bg-green-500/10 text-green-400 text-2xl">💰</div>
+                        <div>
+                            <p class="text-xs text-gray-400 uppercase tracking-wider">Total Pemasukan</p>
+                            <h3 id="widget-total-income" class="text-xl font-bold text-green-400 font-mono-custom">$0</h3>
+                        </div>
+                    </div>
+                </div>
 
-  renderChart(chartLabels, chartIncomes);
-}
+                <!-- DOUBLE CONTAINER GRAPH + QUICK INPUT -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- LEFT COLUMN FORM: QUICK INPUT ABSENSI (Mengikuti File Referensi Gambar Persis) -->
+                    <div class="lg:col-span-2 bg-emsDark p-6 rounded-2xl border border-emsBorder space-y-4 shadow-2xl relative">
+                        <div class="flex justify-between items-center border-b border-emsBorder pb-3">
+                            <h3 class="font-bold text-white text-base flex items-center gap-2">⚡ QUICK INPUT ABSENSI</h3>
+                            <span class="text-[10px] font-mono-custom bg-emsPurple/10 text-emsPurple px-2 py-0.5 rounded">Auto Save Aktif</span>
+                        </div>
+                        
+                        <form id="form-quick-absen" onsubmit="saveAbsensi(event)" class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="flex flex-col gap-1.5">
+                                    <label class="text-xs text-gray-400 font-medium">Nama Petugas</label>
+                                    <select id="input-absen-nama" class="bg-black/40 border border-emsBorder rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-emsPurple w-full" required>
+                                        <option value="">-- Pilih Staf --</option>
+                                    </select>
+                                </div>
+                                <div class="flex flex-col gap-1.5">
+                                    <label class="text-xs text-gray-400 font-medium">Tanggal</label>
+                                    <input type="date" id="input-absen-tanggal" onchange="autoDetectDay()" class="bg-black/40 border border-emsBorder rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-emsPurple w-full font-mono-custom" required>
+                                </div>
+                                <div class="flex flex-col gap-1.5">
+                                    <label class="text-xs text-gray-400 font-medium">Hari</label>
+                                    <input type="text" id="input-absen-hari" class="bg-black/20 border border-emsBorder rounded-xl px-3 py-2.5 text-sm text-gray-400 outline-none w-full" readonly>
+                                </div>
+                            </div>
 
-function renderChart(labels, data) {
-  const ctx = document.getElementById('analyticsChart').getContext('2d');
-  if (mainChart) mainChart.destroy();
-  mainChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: labels,
-      datasets: [{ label: 'Total Income ($)', data: data, backgroundColor: 'rgba(79, 255, 176, 0.3)', borderColor: '#4fffb0', borderWidth: 2, borderRadius: 5 }]
-    },
-    options: { 
-      responsive: true, 
-      maintainAspectRatio: false, 
-      animation: false, 
-      scales: { 
-        y: { grid: { color: '#2a3045' }, ticks: { color: '#6b7490' } }, 
-        x: { grid: { display: false }, ticks: { color: '#6b7490' } } 
-      }, 
-      plugins: { legend: { labels: { color: '#e8eaf0', font: { family: 'Syne' } } } } 
-    }
-  });
-}
+                            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                                <div class="flex flex-col gap-1.5 col-span-1">
+                                    <label class="text-xs text-gray-400 font-medium">Jam Masuk</label>
+                                    <input type="text" id="input-absen-masuk" placeholder="08:30" maxlength="5" oninput="applyTimeMask(this)" class="bg-black/40 border border-emsBorder rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-emsPurple text-center font-mono-custom" required>
+                                </div>
+                                <div class="flex flex-col gap-1.5 col-span-1">
+                                    <label class="text-xs text-gray-400 font-medium">Jam Keluar</label>
+                                    <input type="text" id="input-absen-keluar" placeholder="17:15" maxlength="5" oninput="applyTimeMask(this)" class="bg-black/40 border border-emsBorder rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-emsPurple text-center font-mono-custom" required>
+                                </div>
+                                <div class="flex flex-col gap-1.5 col-span-1">
+                                    <label class="text-xs text-gray-400 font-medium">Treatment</label>
+                                    <input type="number" id="input-absen-treat" min="0" value="0" class="bg-black/40 border border-emsBorder rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-emsPurple text-center font-mono-custom" required>
+                                </div>
+                                <div class="flex flex-col gap-1.5 col-span-1">
+                                    <label class="text-xs text-gray-400 font-medium">Pingsan</label>
+                                    <input type="number" id="input-absen-pingsan" min="0" value="0" class="bg-black/40 border border-emsBorder rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-emsPurple text-center font-mono-custom" required>
+                                </div>
+                                <div class="flex flex-col gap-1.5 col-span-2 md:col-span-1">
+                                    <label class="text-xs text-gray-400 font-medium">Alprazolam</label>
+                                    <input type="number" id="input-absen-alpra" min="0" value="0" class="bg-black/40 border border-emsBorder rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-emsPurple text-center font-mono-custom" required>
+                                </div>
+                            </div>
 
-function exportToExcel() {
-  const week = document.getElementById('weekStart').value;
-  const table = document.getElementById('reportTable');
-  const wb = XLSX.utils.table_to_book(table, { sheet: "Rekap Absensi" });
-  XLSX.writeFile(wb, `Rekap_Absensi_EMS_Valoria_Minggu_${week}.xlsx`);
-}
+                            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 bg-black/40 rounded-xl border border-emsBorder gap-4">
+                                <div>
+                                    <p class="text-[11px] text-gray-400 uppercase font-mono-custom">Estimasi Kalkulasi Baris Ini</p>
+                                    <h4 id="quick-live-income" class="text-xl font-bold text-green-400 font-mono-custom">$0</h4>
+                                </div>
+                                <div class="flex gap-2 w-full sm:w-auto">
+                                    <button type="button" onclick="resetFormAbsen()" class="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-emsBorder text-sm font-semibold hover:bg-white/5 text-gray-300">🔄 Reset Form</button>
+                                    <button type="submit" class="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-emsPurple text-white text-sm font-semibold hover:bg-purple-600 shadow-lg shadow-emsPurple/20">💾 Simpan Data</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
 
-function exportToPDF() {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-  const week = document.getElementById('weekStart').value;
-  
-  doc.setFont("Helvetica", "bold");
-  doc.text("LAPORAN REKAPITULASI JABATAN & INCOME EMS VALORIA", 14, 15);
-  doc.setFontSize(10);
-  doc.setFont("Helvetica", "normal");
-  doc.text(`Periode Kontrak Minggu: ${week}`, 14, 22);
-  
-  doc.autoTable({
-    html: '#reportTable',
-    startY: 28,
-    theme: 'striped',
-    headStyles: { fillColor: [22, 26, 35] },
-    styles: { fontSize: 8 }
-  });
-  
-  doc.save(`Laporan_EMS_Valoria_Minggu_${week}.pdf`);
-}
-</script>
+                    <!-- RIGHT COLUMN FORM: SETTING HARGA KOMODITAS (History Safe Per Minggu) -->
+                    <div class="bg-emsDark p-6 rounded-2xl border border-emsBorder space-y-4 shadow-2xl flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-center border-b border-emsBorder pb-3">
+                                <h3 class="font-bold text-white text-base flex items-center gap-2">⚙️ CONFIG TARIF LAYANAN</h3>
+                            </div>
+                            <p class="text-[11px] text-gray-500 mt-2">Perubahan harga hanya berdampak pada rekap minggu berjalan dan minggu mendatang tanpa merusak data lampau.</p>
+                            
+                            <div class="space-y-4 mt-4">
+                                <div class="flex items-center justify-between gap-4 p-3 bg-black/20 rounded-xl border border-emsBorder">
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-xl">🟢</span>
+                                        <div>
+                                            <p class="text-xs text-white font-medium">Tarif Treatment</p>
+                                            <p class="text-[10px] text-gray-400 font-mono-custom">Per Tindakan</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center bg-black/40 border border-emsBorder rounded-lg px-2 max-w-[100px]">
+                                        <span class="text-xs text-gray-400 font-mono-custom">$</span>
+                                        <input type="number" id="cfg-price-treat" value="35" oninput="saveServiceRates()" class="w-full bg-transparent px-1 py-1.5 text-xs font-bold text-white outline-none font-mono-custom text-right">
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center justify-between gap-4 p-3 bg-black/20 rounded-xl border border-emsBorder">
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-xl">🔴</span>
+                                        <div>
+                                            <p class="text-xs text-white font-medium">Tarif Pingsan</p>
+                                            <p class="text-[10px] text-gray-400 font-mono-custom">Per Korban</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center bg-black/40 border border-emsBorder rounded-lg px-2 max-w-[100px]">
+                                        <span class="text-xs text-gray-400 font-mono-custom">$</span>
+                                        <input type="number" id="cfg-price-pingsan" value="45" oninput="saveServiceRates()" class="w-full bg-transparent px-1 py-1.5 text-xs font-bold text-white outline-none font-mono-custom text-right">
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center justify-between gap-4 p-3 bg-black/20 rounded-xl border border-emsBorder">
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-xl">💊</span>
+                                        <div>
+                                            <p class="text-xs text-white font-medium">Tarif Alprazolam</p>
+                                            <p class="text-[10px] text-gray-400 font-mono-custom">Per Botol</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center bg-black/40 border border-emsBorder rounded-lg px-2 max-w-[100px]">
+                                        <span class="text-xs text-gray-400 font-mono-custom">$</span>
+                                        <input type="number" id="cfg-price-alpra" value="50" oninput="saveServiceRates()" class="w-full bg-transparent px-1 py-1.5 text-xs font-bold text-white outline-none font-mono-custom text-right">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pt-4 border-t border-emsBorder/60 mt-4 flex items-center justify-between">
+                            <span class="text-[10px] text-emsCyan uppercase font-mono-custom tracking-wider">Currency Level: USD ($)</span>
+                            <span class="text-[10px] text-gray-500 font-mono-custom">Storage Status: OK</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LIVE MONITOR AKTIVITAS HARI INI -->
+                <div class="bg-emsDark p-6 rounded-2xl border border-emsBorder space-y-4 shadow-xl">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-emsBorder pb-4">
+                        <div>
+                            <h3 class="font-bold text-white text-base">📋 AKTIVITAS LOG MINGGU INI</h3>
+                            <p class="text-[11px] text-gray-400">Menampilkan seluruh data log berjalan dalam sirkulasi lokal browser</p>
+                        </div>
+                        
+                        <!-- SEARCH AND FILTERS BOX -->
+                        <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                            <input type="text" id="table-search-query" oninput="renderMainTableLogs()" placeholder="Cari Nama / Jabatan / Tanggal..." class="bg-black/40 border border-emsBorder rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-emsPurple min-width-[220px]">
+                            <button onclick="clearLogsFilter()" class="px-3 py-2 rounded-xl border border-emsBorder text-xs text-gray-300 hover:bg-white/5 font-medium">Reset Filter</button>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto rounded-xl border border-emsBorder">
+                        <table class="w-full border-collapse text-left text-xs">
+                            <thead>
+                                <tr class="bg-black/40 text-gray-400 font-semibold uppercase tracking-wider border-b border-emsBorder">
+                                    <th class="p-3">No</th>
+                                    <th class="p-3">Nama Petugas</th>
+                                    <th class="p-3">Jabatan</th>
+                                    <th class="p-3">Tanggal</th>
+                                    <th class="p-3">Hari</th>
+                                    <th class="p-3">Jam Masuk</th>
+                                    <th class="p-3">Jam Keluar</th>
+                                    <th class="p-3">Duty</th>
+                                    <th class="p-3 text-center">T</th>
+                                    <th class="p-3 text-center">P</th>
+                                    <th class="p-3 text-center">A</th>
+                                    <th class="p-3 text-right">Pemasukan</th>
+                                    <th class="p-3 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="main-table-log-body" class="divide-y divide-emsBorder">
+                                <!-- Dinamis disuntik oleh javascript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= TAB: INPUT ABSENSI DIRECT ================= -->
+            <section id="tab-input-absen" class="tab-content hidden space-y-4">
+                <div class="bg-emsDark p-6 rounded-2xl border border-emsBorder space-y-4">
+                    <h2 class="text-lg font-bold text-white">✍️ Formulir Input Absensi Mandiri</h2>
+                    <p class="text-xs text-gray-400">Silakan gunakan form input absensi cepat yang berada di halaman utama Dashboard Utama.</p>
+                    <button onclick="switchTab('dashboard')" class="px-4 py-2 rounded-xl bg-emsPurple text-xs text-white">Kembali Ke Dashboard</button>
+                </div>
+            </section>
+
+            <!-- ================= TAB: REKAP MINGGUAN GRID ================= -->
+            <section id="tab-rekap-mingguan" class="tab-content hidden space-y-6">
+                <div class="bg-emsDark p-6 rounded-2xl border border-emsBorder space-y-4">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-emsBorder pb-4">
+                        <div>
+                            <h2 class="text-lg font-bold text-white">📅 Visualisasi Kartu Distribusi Absensi Staf</h2>
+                            <p class="text-xs text-gray-400">Data dikelompokkan secara visual per-staf berdasarkan filter kalender minggu berjalan (Minggu ke Sabtu)</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <label class="text-xs text-gray-400 font-medium font-mono-custom">Minggu:</label>
+                            <input type="date" id="rekap-filter-date" onchange="renderWeeklyMemberCards()" class="bg-black/40 border border-emsBorder rounded-xl px-3 py-2 text-xs text-white font-mono-custom outline-none focus:border-emsPurple">
+                        </div>
+                    </div>
+
+                    <!-- CONTAINER GRID MEMBER CARDS MINGGUAN -->
+                    <div id="weekly-cards-grid-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Dinamis diisi dari JS -->
+                    </div>
+                </div>
+
+                <!-- CHART ANALYTICS SECTION -->
+                <div class="bg-emsDark p-6 rounded-2xl border border-emsBorder space-y-4">
+                    <h3 class="font-bold text-white text-base">📊 Grafik Total Distribusi Finansial Anggota</h3>
+                    <div class="h-64 relative w-full">
+                        <canvas id="chart-rekap-batang"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= TAB: DAFTAR STAF AKTIF (MANAJEMEN BULK ADD) ================= -->
+            <section id="tab-daftar-staf" class="tab-content hidden grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- FORM MANAGEMENT STAF (SINGLE / BULK INTERACTION) -->
+                <div class="bg-emsDark p-6 rounded-2xl border border-emsBorder space-y-5 h-fit shadow-2xl">
+                    <div class="border-b border-emsBorder pb-3">
+                        <h2 class="text-base font-bold text-white">⚙️ PANEL MANAJEMEN ANGGOTA</h2>
+                        <p class="text-[11px] text-gray-400">Tambah, Edit, atau Import Anggota Massal</p>
+                    </div>
+
+                    <!-- Mode Tunggal Form -->
+                    <div id="staf-form-tunggal-box" class="space-y-4">
+                        <h3 id="staf-form-title" class="text-xs font-bold text-emsCyan uppercase tracking-wider">Tambah Anggota Baru</h3>
+                        <input type="hidden" id="staf-edit-id">
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-xs text-gray-400 font-medium">Nama Anggota</label>
+                            <input type="text" id="staf-input-nama" placeholder="Ketik nama lengkap..." class="bg-black/40 border border-emsBorder rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-emsPurple">
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-xs text-gray-400 font-medium">Jabatan Pangkat</label>
+                            <select id="staf-input-jabatan" class="bg-black/40 border border-emsBorder rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-emsPurple">
+                                <!-- Dinamis dari storage -->
+                            </select>
+                        </div>
+                        <div class="flex gap-2 pt-2">
+                            <button id="btn-staf-cancel" onclick="cancelStafEdit()" class="hidden flex-1 px-3 py-2 text-xs font-semibold rounded-xl border border-emsBorder text-gray-400 hover:bg-white/5">Batal</button>
+                            <button onclick="saveSingleMember()" class="flex-1 px-4 py-2 text-xs font-semibold rounded-xl bg-emsPurple text-white hover:bg-purple-600 shadow-md shadow-emsPurple/20">Simpan Staf</button>
+                        </div>
+                    </div>
+
+                    <div class="h-px bg-emsBorder"></div>
+
+                    <!-- BULK ADD INTEGRATED MODULE -->
+                    <div class="space-y-3">
+                        <h3 class="text-xs font-bold text-emsPurple uppercase tracking-wider">📦 BULK ADD MEMBER (MASSAL)</h3>
+                        <p class="text-[10px] text-gray-400">Pisahkan nama dengan baris baru (Enter) untuk memasukkan banyak staf sekaligus.</p>
+                        <textarea id="staf-bulk-textarea" rows="5" placeholder="Andi&#10;Budi&#10;Charlie" class="w-full bg-black/40 border border-emsBorder rounded-xl p-3 text-xs text-white outline-none focus:border-emsPurple font-mono-custom"></textarea>
+                        
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-xs text-gray-400 font-medium">Opsi Jabatan Staf Massal</label>
+                            <select id="staf-bulk-jabatan-opt" class="bg-black/40 border border-emsBorder rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-emsPurple">
+                                <option value="SAME">Gunakan jabatan yang sama untuk semua</option>
+                                <option value="NONE">Tentukan satu per satu nanti (Default: EMT)</option>
+                            </select>
+                        </div>
+                        <button onclick="processBulkAddMembers()" class="w-full px-4 py-2 text-xs font-semibold rounded-xl border border-emsCyan text-emsCyan hover:bg-emsCyan/5 transition">Eksekusi Import Massal</button>
+                    </div>
+                </div>
+
+                <!-- VIEW STAFF LIST TABLE (SCROLL MONITOR) -->
+                <div class="lg:col-span-2 bg-emsDark p-6 rounded-2xl border border-emsBorder space-y-4 shadow-2xl">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-emsBorder pb-3">
+                        <div>
+                            <h2 class="text-base font-bold text-white">👥 DATA DAFTAR STAF TIM</h2>
+                            <p class="text-xs text-gray-400">Total terdaftar: <span id="staf-total-badge" class="font-bold text-emsCyan">0</span> Staf Medis</p>
+                        </div>
+                        <input type="text" id="staf-search-query" oninput="renderStafPanelList()" placeholder="Cari nama staf..." class="bg-black/40 border border-emsBorder rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-emsPurple w-full sm:w-64">
+                    </div>
+
+                    <div class="max-h-[450px] overflow-y-auto custom-scroll border border-emsBorder rounded-xl">
+                        <table class="w-full border-collapse text-left text-xs">
+                            <thead>
+                                <tr class="bg-black/40 text-gray-400 font-semibold border-b border-emsBorder uppercase tracking-wider sticky top-0">
+                                    <th class="p-3">No</th>
+                                    <th class="p-3">Nama Anggota</th>
+                                    <th class="p-3">Jabatan Resmi</th>
+                                    <th class="p-3 text-center">Aksi Operasional</th>
+                                </tr>
+                            </thead>
+                            <tbody id="staf-panel-table-body" class="divide-y divide-emsBorder">
+                                <!-- Dinamis disuntik JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= TAB: STRUKTUR JABATAN DIRECT MANAGEMENT ================= -->
+            <section id="tab-struktur-jabatan" class="tab-content hidden grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="bg-emsDark p-6 rounded-2xl border border-emsBorder space-y-4 h-fit">
+                    <div class="border-b border-emsBorder pb-3">
+                        <h2 class="text-base font-bold text-white">🌿 CONFIG JABATAN</h2>
+                        <p class="text-xs text-gray-400">Tambah atau Edit Kamus Pangkat Sistem</p>
+                    </div>
+                    <div class="space-y-4">
+                        <input type="hidden" id="rank-edit-index">
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-xs text-gray-400 font-medium">Nama Jabatan Pangkat</label>
+                            <input type="text" id="rank-input-name" placeholder="Contoh: TRAINEE" class="bg-black/40 border border-emsBorder rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-emsPurple font-bold">
+                        </div>
+                        <div class="flex gap-2">
+                            <button id="btn-rank-cancel" onclick="cancelRankEdit()" class="hidden flex-1 px-3 py-2 text-xs font-semibold rounded-xl border border-emsBorder text-gray-400">Batal</button>
+                            <button onclick="saveCustomRank()" class="flex-1 px-4 py-2 text-xs font-semibold rounded-xl bg-emsCyan text-black hover:bg-cyan-400 font-bold">Simpan Pangkat</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-2 bg-emsDark p-6 rounded-2xl border border-emsBorder space-y-4">
+                    <div>
+                        <h2 class="text-base font-bold text-white">👑 HIERARKI URUTAN STRUKTUR JABATAN</h2>
+                        <p class="text-xs text-gray-400">Urutan pangkat di bawah ini otomatis mengontrol penyusunan visual organisasi di seluruh dashboard.</p>
+                    </div>
+
+                    <div class="space-y-2" id="rank-drag-container">
+                        <!-- Dinamis dirender oleh JS dengan kontrol tombol up/down sebagai pengganti drop -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= TAB: EXPORT, BACKUP & RESTORE JSON PANEL ================= -->
+            <section id="tab-export-panel" class="tab-content hidden grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- EXPORT FILE SECTION -->
+                <div class="bg-emsDark p-6 rounded-2xl border border-emsBorder space-y-4 shadow-xl">
+                    <h3 class="font-bold text-white text-base border-b border-emsBorder pb-2">📂 UNDUH DOKUMEN REKAPITULASI</h3>
+                    <p class="text-xs text-gray-400">Ekspor sirkulasi data lokal menjadi berkas dokumen eksternal komputer.</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                        <button onclick="exportToExcelVRP()" class="p-4 rounded-xl bg-green-600/10 border border-green-500 text-green-400 text-xs font-bold hover:bg-green-600 hover:text-white transition flex flex-col items-center gap-2 justify-center">
+                            <span class="text-xl">📊</span> Excel (.xlsx)
+                        </button>
+                        <button onclick="exportToPDFVRP()" class="p-4 rounded-xl bg-red-600/10 border border-red-500 text-red-400 text-xs font-bold hover:bg-red-600 hover:text-white transition flex flex-col items-center gap-2 justify-center">
+                            <span class="text-xl">📑</span> PDF (.pdf)
+                        </button>
+                        <button onclick="exportToWordVRP()" class="p-4 rounded-xl bg-blue-600/10 border border-blue-500 text-blue-400 text-xs font-bold hover:bg-blue-600 hover:text-white transition flex flex-col items-center gap-2 justify-center">
+                            <span class="text-xl">📝</span> Word (.docx)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- BACKUP JSON MODULE -->
+                <div class="bg-emsDark p-6 rounded-2xl border border-emsBorder space-y-4 shadow-xl">
+                    <h3 class="font-bold text-white text-base border-b border-emsBorder pb-2">📦 BACKUP SYSTEM (JSON CORE)</h3>
+                    <p class="text-xs text-gray-400">Amankan seluruh konfigurasi absensi, harga, anggota, dan hirarki jabatan menjadi satu file tunggal.</p>
+                    <div class="flex flex-col sm:flex-row gap-2 pt-2">
+                        <button onclick="backupSystemJSON()" class="flex-1 px-4 py-3 rounded-xl bg-emsPurple text-white text-xs font-bold hover:bg-purple-600 transition">💾 Ekspor Core JSON</button>
+                        <label class="flex-1 px-4 py-3 rounded-xl border border-emsCyan text-emsCyan text-xs font-bold hover:bg-emsCyan/5 transition text-center cursor-pointer">
+                            📥 Impor Core JSON
+                            <input type="file" id="json-import-file" accept=".json" onchange="importSystemJSON(event)" class="hidden">
+                        </label>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- ================= MODERN JAVASCRIPT CORE CLOUD ENGINE ================= -->
+    <script>
+        // --- 1. STATE INITIALIZATION & DATABASE STOCKS ---
+        let absensiData = JSON.parse(localStorage.getItem('vrp_absensi')) || [];
+        let anggotaData = JSON.parse(localStorage.getItem('vrp_anggota')) || [
+            { id: "1", nama: "Zhagi", jabatan: "HEAD OF EMS" },
+            { id: "2", nama: "Mirae", jabatan: "DEPUTY OF EMS" },
+            { id: "3", nama: "Yoharu", jabatan: "SECRETARIAT" }
+        ];
+        let jabatanData = JSON.parse(localStorage.getItem('vrp_jabatan')) || [
+            "HEAD OF EMS", "DEPUTY OF EMS", "SECRETARIAT", "DOKTER", "PARAMEDIC", "EMT", "TRAINEE"
+        ];
+        let hargaLayananHistory = JSON.parse(localStorage.getItem('vrp_harga_history')) || {};
+
+        // --- 2. LIFE ENGINE TRACKER ---
+        window.addEventListener('DOMContentLoaded', () => {
+            initLiveTimeEngine();
+            syncFormSelectors();
+            
+            // Kunci filter tanggal rekap ke minggu berjalan saat ini
+            const sun = new Date(); sun.setDate(sun.getDate() - sun.getDay());
+            document.getElementById('rekap-filter-date').value = sun.toISOString().split('T')[0];
+            document.getElementById('input-absen-tanggal').value = new Date().toISOString().split('T')[0];
+            autoDetectDay();
+
+            // Memuat nilai ketikan harga terakhir
+            loadCurrentWeekRatesIntoInputs();
+            
+            // Render Visual Screen Data
+            refreshAllDashboardComponents();
+        });
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const bgClass = type === 'danger' ? 'bg-red-500' : type === 'warning' ? 'bg-amber-500' : 'bg-green-500';
+            toast.className = `${bgClass} text-black px-4 py-3 rounded-xl shadow-2xl text-xs font-bold flex items-center gap-2 transition duration-300 transform translate-x-10 opacity-0`;
+            toast.innerText = `🔔 ${message}`;
+            container.appendChild(toast);
+            setTimeout(() => { toast.classList.remove('translate-x-10', 'opacity-0'); }, 10);
+            setTimeout(() => {
+                toast.classList.add('translate-x-10', 'opacity-0');
+                setTimeout(() => { toast.remove(); }, 300);
+            }, 3000);
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('active-menu'));
+            document.getElementById(`menu-${tabId}`).classList.add('active-menu');
+        }
+
+        function initLiveTimeEngine() {
+            setInterval(() => {
+                const now = new Date();
+                const opsiHari = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                document.getElementById('top-live-date').innerText = now.toLocaleDateString('id-ID', opsiHari);
+                document.getElementById('top-live-time').innerText = now.toTimeString().split(' ')[0];
+            }, 1000);
+        }
+
+        function applyTimeMask(input) {
+            let val = input.value.replace(/\D/g, '');
+            if (val.length > 2) val = val.slice(0,2) + ':' + val.slice(2,4);
+            input.value = val;
+        }
+
+        function autoDetectDay() {
+            const dateVal = document.getElementById('input-absen-tanggal').value;
+            if(!dateVal) return;
+            const hariList = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+            const dayIdx = new Date(dateVal).getDay();
+            document.getElementById('input-absen-hari').value = hariList[dayIdx];
+        }
+
+        function getWeekKeyFromDate(dateObj) {
+            const d = new Date(dateObj);
+            d.setDate(d.getDate() - d.getDay()); // Mundur ke hari Minggu terdekat
+            return d.toISOString().split('T')[0];
+        }
+
+        // --- 3. HARGA CONFIG MANAGEMENT SAVING HISTORY ---
+        function saveServiceRates() {
+            const activeWeekKey = getWeekKeyFromDate(new Date(document.getElementById('rekap-filter-date').value));
+            const tPrice = parseFloat(document.getElementById('cfg-price-treat').value) || 0;
+            const pPrice = parseFloat(document.getElementById('cfg-price-pingsan').value) || 0;
+            const aPrice = parseFloat(document.getElementById('cfg-price-alpra').value) || 0;
+
+            hargaLayananHistory[activeWeekKey] = { treatment: tPrice, pingsan: pPrice, alprazolam: aPrice };
+            localStorage.setItem('vrp_harga_history', JSON.stringify(hargaLayananHistory));
+            
+            refreshAllDashboardComponents();
+        }
+
+        function loadCurrentWeekRatesIntoInputs() {
+            const activeWeekKey = getWeekKeyFromDate(new Date(document.getElementById('rekap-filter-date').value));
+            const rateConfig = hargaLayananHistory[activeWeekKey] || { treatment: 35, pingsan: 45, alprazolam: 50 };
+            
+            document.getElementById('cfg-price-treat').value = rateConfig.treatment;
+            document.getElementById('cfg-price-pingsan').value = rateConfig.pingsan;
+            document.getElementById('cfg-price-alpra').value = rateConfig.alprazolam;
+        }
+
+        function getRateForWeek(weekKey, type) {
+            const fallback = { treatment: 35, pingsan: 45, alprazolam: 50 };
+            const cfg = hargaLayananHistory[weekKey] || fallback;
+            return cfg[type] !== undefined ? cfg[type] : fallback[type];
+        }
+
+        // --- 4. ENGINE CORE MANAJEMEN STAF MEDIC ---
+        function syncFormSelectors() {
+            const selectAbsen = document.getElementById('input-absen-nama');
+            const selectStafJabatan = document.getElementById('staf-input-jabatan');
+            const bulkJabatanOpt = document.getElementById('staf-bulk-jabatan-opt');
+
+            const lastSelected = selectAbsen.value;
+            selectAbsen.innerHTML = '<option value="">-- Pilih Staf --</option>';
+            anggotaData.forEach(staf => {
+                selectAbsen.innerHTML += `<option value="${staf.nama}">${staf.nama} (${staf.jabatan})</option>`;
+            });
+            if(lastSelected) selectAbsen.value = lastSelected;
+
+            selectStafJabatan.innerHTML = '';
+            jabatanData.forEach(jab => {
+                selectStafJabatan.innerHTML += `<option value="${jab}">${jab}</option>`;
+            });
+        }
+
+        function saveSingleMember() {
+            const namaInput = document.getElementById('staf-input-nama').value.trim();
+            const jabSelect = document.getElementById('staf-input-jabatan').value;
+            const editId = document.getElementById('staf-edit-id').value;
+
+            if(!namaInput) return showToast('Ketik nama staf terlebih dahulu!', 'danger');
+
+            if(editId) {
+                // Mode Edit Staf
+                const idx = anggotaData.findIndex(a => a.id === editId);
+                if(idx !== -1) {
+                    anggotaData[idx].nama = namaInput;
+                    anggotaData[idx].jabatan = jabSelect;
+                    showToast('Data anggota berhasil diperbarui');
+                }
+            } else {
+                // Mode Tambah Baru
+                if(anggotaData.some(a => a.nama.toLowerCase() === namaInput.toLowerCase())) {
+                    return showToast('Nama staf tersebut sudah terdaftar!', 'warning');
+                }
+                anggotaData.push({ id: Date.now().toString(), nama: namaInput, jabatan: jabSelect });
+                showToast('Anggota baru berhasil didaftarkan');
+            }
+
+            localStorage.setItem('vrp_anggota', JSON.stringify(anggotaData));
+            cancelStafEdit();
+            syncFormSelectors();
+            refreshAllDashboardComponents();
+        }
+
+        function processBulkAddMembers() {
+            const text = document.getElementById('staf-bulk-textarea').value.trim();
+            const opt = document.getElementById('staf-bulk-jabatan-opt').value;
+            const fallbackJabatan = document.getElementById('staf-input-jabatan').value || "EMT";
+
+            if(!text) return showToast('Masukkan baris nama massal terlebih dahulu!', 'danger');
+
+            const barisNama = text.split('\n').map(n => n.trim()).filter(n => n.length > 0);
+            let totalSukses = 0;
+
+            barisNama.forEach(namaStaf => {
+                if(!anggotaData.some(a => a.nama.toLowerCase() === namaStaf.toLowerCase())) {
+                    anggotaData.push({
+                        id: (Date.now() + Math.random()).toString(),
+                        nama: namaStaf,
+                        jabatan: opt === 'SAME' ? fallbackJabatan : 'EMT'
+                    });
+                    totalSukses++;
+                }
+            });
+
+            localStorage.setItem('vrp_anggota', JSON.stringify(anggotaData));
+            document.getElementById('staf-bulk-textarea').value = '';
+            syncFormSelectors();
+            refreshAllDashboardComponents();
+            showToast(`${totalSukses} Anggota baru massal berhasil diimport sekaligus`);
+        }
+
+        function triggerEditStaf(id) {
+            const staf = anggotaData.find(a => a.id === id);
+            if(!staf) return;
+            document.getElementById('staf-edit-id').value = staf.id;
+            document.getElementById('staf-input-nama').value = staf.nama;
+            document.getElementById('staf-input-jabatan').value = staf.jabatan;
+            document.getElementById('staf-form-title').innerText = "📝 Edit Informasi Staf";
+            document.getElementById('btn-staf-cancel').classList.remove('hidden');
+        }
+
+        function cancelStafEdit() {
+            document.getElementById('staf-edit-id').value = '';
+            document.getElementById('staf-input-nama').value = '';
+            document.getElementById('staf-form-title').innerText = "Tambah Anggota Baru";
+            document.getElementById('btn-staf-cancel').classList.add('hidden');
+        }
+
+        function deleteStaf(id) {
+            if(!confirm('Apakah lo yakin ingin menghapus anggota ini beserta sirkulasi datanya?')) return;
+            anggotaData = anggotaData.filter(a => a.id !== id);
+            localStorage.setItem('vrp_anggota', JSON.stringify(anggotaData));
+            syncFormSelectors();
+            refreshAllDashboardComponents();
+            showToast('Data staf berhasil dihapus secara permanen', 'danger');
+        }
+
+        // --- 5. ENGINE CORE ABSENSI CALCULATION ---
+        function calculateDutyHours(inTime, outTime) {
+            if(!inTime || !outTime || !inTime.includes(':') || !outTime.includes(':')) return 0;
+            const [sH, sM] = inTime.split(':').map(Number);
+            const [eH, eM] = outTime.split(':').map(Number);
+            let selisihMenit = (eH * 60 + eM) - (sH * 60 + sM);
+            if (selisihMenit < 0) selisihMenit += 1440; // Proteksi jika melewati tengah malam
+            return selisihMenit / 60;
+        }
+
+        function saveAbsensi(e) {
+            e.preventDefault();
+            const nama = document.getElementById('input-absen-nama').value;
+            const tanggal = document.getElementById('input-absen-tanggal').value;
+            const hari = document.getElementById('input-absen-hari').value;
+            const masuk = document.getElementById('input-absen-masuk').value;
+            const keluar = document.getElementById('input-absen-keluar').value;
+            const treat = parseInt(document.getElementById('input-absen-treat').value) || 0;
+            const pingsan = parseInt(document.getElementById('input-absen-pingsan').value) || 0;
+            const alpra = parseInt(document.getElementById('input-absen-alpra').value) || 0;
+
+            if(!nama) return showToast('Pilih nama petugas terlebih dahulu!', 'warning');
+
+            const weekKey = getWeekKeyFromDate(new Date(tanggal));
+            const totalJam = calculateDutyHours(masuk, keluar);
+
+            const payload = {
+                id: Date.now().toString(),
+                nama,
+                jabatan: anggotaData.find(a => a.nama === nama)?.jabatan || 'EMT',
+                tanggal,
+                hari,
+                jamMasuk: masuk,
+                jamKeluar: keluar,
+                totalDuty: totalJam,
+                treatment: treat,
+                pingsan: pingsan,
+                alprazolam: alpra,
+                weekKey: weekKey
+            };
+
+            absensinyaPushOrOverwrite(payload);
+        }
+
+        function absensinyaPushOrOverwrite(payload) {
+            // Overwrite jika ada nama yang absen di hari dan tanggal yang sama
+            const existingIdx = absensiData.findIndex(r => r.nama === payload.nama && r.tanggal === payload.tanggal);
+            if (existingIdx !== -1) {
+                absensiData[existingIdx] = payload;
+                showToast('Log absensi tanggal yang sama berhasil ditimpa');
+            } else {
+                absensiData.push(payload);
+                showToast('Log absensi berhasil disimpan ke local storage');
+            }
+
+            localStorage.setItem('vrp_absensi', JSON.stringify(absensiData));
+            
+            // Note: Sesuai spek kemudahan input, nama terakhir di form TIDAK di-reset
+            document.getElementById('input-absen-treat').value = 0;
+            document.getElementById('input-absen-pingsan').value = 0;
+            document.getElementById('input-absen-alpra').value = 0;
+            document.getElementById('input-absen-masuk').value = '';
+            document.getElementById('input-absen-keluar').value = '';
+
+            refreshAllDashboardComponents();
+        }
+
+        function deleteLogAbsen(id) {
+            if(!confirm('Hapus log baris absensi ini?')) return;
+            absensiData = absensiData.filter(a => a.id !== id);
+            localStorage.setItem('vrp_absensi', JSON.stringify(absensiData));
+            refreshAllDashboardComponents();
+            showToast('Baris absensi berhasil dihapus', 'danger');
+        }
+
+        function clearLogsFilter() {
+            document.getElementById('table-search-query').value = '';
+            renderMainTableLogs();
+        }
+
+        // --- 6. RENDER ENGINE VIEW DASHBOARD CONTROLLER ---
+        function refreshAllDashboardComponents() {
+            updateDashboardWidgets();
+            renderMainTableLogs();
+            renderWeeklyMemberCards();
+            renderStafPanelList();
+            renderRankHierarchyList();
+        }
+
+        function updateDashboardWidgets() {
+            const currentWeekKey = getWeekKeyFromDate(new Date(document.getElementById('rekap-filter-date').value));
+            const filtered = absensiData.filter(r => r.weekKey === currentWeekKey);
+
+            let tDuty = 0, tTreat = 0, tPingsan = 0, tIncome = 0;
+            let anggotaAktifSet = new Set();
+
+            const rTreat = getRateForWeek(currentWeekKey, 'treatment');
+            const rPingsan = getRateForWeek(currentWeekKey, 'pingsan');
+            const rAlpra = getRateForWeek(currentWeekKey, 'alprazolam');
+
+            filtered.forEach(r => {
+                tDuty += r.totalDuty;
+                tTreat += r.treatment;
+                tPingsan += r.pingsan;
+                tIncome += (r.treatment * rTreat) + (r.pingsan * rPingsan) + (r.alprazolam * rAlpra);
+                anggotaAktifSet.add(r.nama);
+            });
+
+            document.getElementById('widget-total-duty').innerText = `${tDuty.toFixed(1)} Jam`;
+            document.getElementById('widget-total-treat').innerText = tTreat;
+            document.getElementById('widget-total-pingsan').innerText = `${tPingsan} Kasus`;
+            document.getElementById('widget-total-income').innerText = `$${tIncome.toLocaleString('id-ID')}`;
+        }
+
+        function renderMainTableLogs() {
+            const query = document.getElementById('table-search-query').value.toLowerCase().trim();
+            const targetWeekKey = getWeekKeyFromDate(new Date(document.getElementById('rekap-filter-date').value));
+            const tbody = document.getElementById('main-table-log-body');
+            tbody.innerHTML = '';
+
+            let counter = 1;
+            absensiData.forEach(r => {
+                const matchQuery = !query || r.nama.toLowerCase().includes(query) || r.jabatan.toLowerCase().includes(query) || r.tanggal.includes(query);
+                
+                if (r.weekKey === targetWeekKey && matchQuery) {
+                    const rTreat = getRateForWeek(r.weekKey, 'treatment');
+                    const rPingsan = getRateForWeek(r.weekKey, 'pingsan');
+                    const rAlpra = getRateForWeek(r.weekKey, 'alprazolam');
+                    const rowIncome = (r.treatment * rTreat) + (r.pingsan * rPingsan) + (r.alprazolam * rAlpra);
+
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-white/[0.02] transition">
+                            <td class="p-3 font-mono-custom text-gray-500">${counter++}</td>
+                            <td class="p-3 font-bold text-white">${r.nama}</td>
+                            <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] bg-emsPurple/10 text-emsPurple font-bold border border-emsPurple/20">${r.jabatan}</span></td>
+                            <td class="p-3 font-mono-custom">${r.tanggal}</td>
+                            <td class="p-3">${r.hari}</td>
+                            <td class="p-3 font-mono-custom text-emsCyan">${r.jamMasuk}</td>
+                            <td class="p-3 font-mono-custom text-emsCyan">${r.jamKeluar}</td>
+                            <td class="p-3 font-mono-custom text-gray-300">${r.totalDuty.toFixed(1)}h</td>
+                            <td class="p-3 text-center font-mono-custom text-purple-400">${r.treatment}</td>
+                            <td class="p-3 text-center font-mono-custom text-orange-400">${r.pingsan}</td>
+                            <td class="p-3 text-center font-mono-custom text-cyan-400">${r.alprazolam}</td>
+                            <td class="p-3 text-right font-mono-custom text-green-400 font-bold">$${rowIncome}</td>
+                            <td class="p-3 text-center">
+                                <button onclick="deleteLogAbsen('${r.id}')" class="text-red-400 hover:text-red-500 text-sm">🗑️</button>
+                            </td>
+                        </tr>`;
+                }
+            });
+            if(counter === 1) {
+                tbody.innerHTML = `<tr><td colspan="13" class="p-8 text-center text-gray-500 font-mono-custom">Tidak ada sirkulasi record data log rekap untuk minggu ini.</td></tr>`;
+            }
+        }
+
+        function renderWeeklyMemberCards() {
+            loadCurrentWeekRatesIntoInputs();
+            const targetWeekKey = getWeekKeyFromDate(new Date(document.getElementById('rekap-filter-date').value));
+            const container = document.getElementById('weekly-cards-grid-container');
+            container.innerHTML = '';
+
+            const weeklyLogs = absensiData.filter(r => r.weekKey === targetWeekKey);
+            
+            // Pengelompokan data per petugas
+            const grouped = {};
+            weeklyLogs.forEach(r => {
+                if(!grouped[r.nama]) grouped[r.nama] = { nama: r.nama, jabatan: r.jabatan, logs: {} };
+                grouped[r.nama].logs[r.hari] = r;
+            });
+
+            const HARI_URUTAN = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+            const names = Object.keys(grouped);
+
+            let chartLabels = [], chartIncomes = [];
+
+            if(names.length === 0) {
+                container.innerHTML = `<div class="col-span-2 p-8 text-center bg-black/20 rounded-xl border border-emsBorder text-gray-500">Bagan sirkulasi visual data grid kosong. Silakan isi form absensi.</div>`;
+                renderBarChartEngine([], []);
+                return;
+            }
+
+            names.forEach(name => {
+                const item = grouped[name];
+                let daysHtml = '';
+                let tDuty = 0, tTreat = 0, tPingsan = 0, tAlpra = 0;
+
+                const rTreat = getRateForWeek(targetWeekKey, 'treatment');
+                const rPingsan = getWeekKeyFromDate(new Date(document.getElementById('rekap-filter-date').value)) ? getRateForWeek(targetWeekKey, 'pingsan') : 45;
+                const rAlpra = getRateForWeek(targetWeekKey, 'alprazolam');
+
+                HARI_URUTAN.forEach(hari => {
+                    const log = item.logs[hari];
+                    if(log) {
+                        tDuty += log.totalDuty; tTreat += log.treatment; tPingsan += log.pingsan; tAlpra += log.alprazolam;
+                        daysHtml += `
+                            <div class="bg-black/40 p-2 rounded-xl border border-emsPurple/30 flex flex-col justify-between text-center min-h-[90px]">
+                                <p class="text-[10px] text-emsCyan font-bold uppercase">${hari}</p>
+                                <p class="text-[10px] font-mono-custom text-white font-bold my-1">${log.jamMasuk}-${log.jamKeluar}</p>
+                                <p class="text-[9px] font-mono-custom text-gray-400">⏱️ ${log.totalDuty.toFixed(1)}h</p>
+                                <p class="text-[8px] font-mono-custom text-gray-500">T:${log.treatment} P:${log.pingsan} A:${log.alprazolam}</p>
+                            </div>`;
+                    } else {
+                        daysHtml += `
+                            <div class="bg-black/10 p-2 rounded-xl border border-emsBorder/40 flex flex-col justify-center text-center text-gray-600 min-h-[90px]">
+                                <p class="text-[10px] uppercase font-bold text-gray-600">${hari}</p>
+                                <p class="text-xs my-1 font-mono-custom">—</p>
+                            </div>`;
+                    }
+                });
+
+                const totalIncome = (tTreat * rTreat) + (tPingsan * rPingsan) + (tAlpra * rAlpra);
+                chartLabels.push(item.nama);
+                chartIncomes.push(totalIncome);
+
+                container.innerHTML += `
+                    <div class="bg-emsDark p-5 rounded-2xl border border-emsBorder space-y-4 shadow-xl">
+                        <div class="flex justify-between items-center border-b border-emsBorder/60 pb-2">
+                            <div>
+                                <h4 class="font-bold text-white text-sm">👤 ${item.nama}</h4>
+                                <span class="text-[9px] px-2 py-0.5 rounded bg-emsCyan/10 text-emsCyan border border-emsCyan/20 font-bold uppercase">${item.jabatan}</span>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-[9px] text-gray-400 uppercase font-mono-custom">Accumulated Pay</p>
+                                <p class="text-base font-bold text-green-400 font-mono-custom">$${totalIncome.toLocaleString('id-ID')}</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-4 sm:grid-cols-7 gap-1.5">${daysHtml}</div>
+                    </div>`;
+            });
+
+            renderBarChartEngine(chartLabels, chartIncomes);
+            updateDashboardWidgets();
+            renderMainTableLogs();
+        }
+
+        function renderBarChartEngine(labels, data) {
+            const ctx = document.getElementById('chart-rekap-batang').getContext('2d');
+            if(mainChart) mainChart.destroy();
+            mainChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Total Akumulasi Income ($)',
+                        data: data,
+                        backgroundColor: 'rgba(108, 92, 231, 0.3)',
+                        borderColor: '#00cec9',
+                        borderWidth: 2,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { grid: { color: '#222533' }, ticks: { color: '#6b7490', font: { family: 'DM Mono' } } },
+                        x: { grid: { display: false }, ticks: { color: '#6b7490' } }
+                    },
+                    plugins: { legend: { labels: { color: '#fff', font: { family: 'Syne' } } } }
+                }
+            });
+        }
+
+        function renderStafPanelList() {
+            const query = document.getElementById('staf-search-query').value.toLowerCase().trim();
+            const tbody = document.getElementById('staf-panel-table-body');
+            tbody.innerHTML = '';
+
+            let counter = 1;
+            let counterAktif = 0;
+
+            // Sorting berdasarkan indeks hierarki jabatan data
+            let sorted = [...anggotaData].sort((a,b) => jabatanData.indexOf(a.jabatan) - jabatanData.indexOf(b.jabatan));
+
+            sorted.forEach(staf => {
+                if(!query || staf.nama.toLowerCase().includes(query) || staf.jabatan.toLowerCase().includes(query)) {
+                    counterAktif++;
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-white/[0.02]">
+                            <td class="p-3 font-mono-custom text-gray-500">${counter++}</td>
+                            <td class="p-3 font-bold text-white">${staf.nama}</td>
+                            <td class="p-3">
+                                <select onchange="updateMemberRankInline('${staf.id}', this.value)" class="bg-black/60 border border-emsBorder rounded-lg px-2 py-1 text-xs text-emsCyan outline-none font-bold">
+                                    ${jabatanData.map(j => `<option value="${j}" ${staf.jabatan === j ? 'selected':''}>${j}</option>`).join('')}
+                                </select>
+                            </td>
+                            <td class="p-3 text-center space-x-2">
+                                <button onclick="triggerEditStaf('${staf.id}')" class="text-emsCyan hover:underline text-xs font-semibold">✏️ Edit</button>
+                                <button onclick="deleteStaf('${staf.id}')" class="text-red-400 hover:underline text-xs font-semibold">🗑️ Hapus</button>
+                            </td>
+                        </tr>`;
+                }
+            });
+            document.getElementById('staf-total-badge').innerText = counterAktif;
+        }
+
+        function updateMemberRankInline(id, newRank) {
+            const idx = anggotaData.findIndex(a => a.id === id);
+            if(idx !== -1) {
+                anggotaData[idx].jabatan = newRank;
+                localStorage.setItem('vrp_anggota', JSON.stringify(anggotaData));
+                showToast('Pangkat jabatan berhasil dimutasi langsung');
+                refreshAllDashboardComponents();
+                syncFormSelectors();
+            }
+        }
+
+        function renderRankHierarchyList() {
+            const container = document.getElementById('rank-drag-container');
+            container.innerHTML = '';
+
+            jabatanData.forEach((jab, index) => {
+                container.innerHTML += `
+                    <div class="flex items-center justify-between p-3.5 bg-black/40 border border-emsBorder rounded-xl hover:border-emsPurple/40 transition">
+                        <div class="flex items-center gap-3">
+                            <span class="font-mono-custom text-xs text-gray-500">#0${index+1}</span>
+                            <span class="font-bold text-sm text-white tracking-wide">${jab}</span>
+                        </div>
+                        <div class="flex gap-1">
+                            <button onclick="moveRankPosition(${index}, -1)" class="w-8 h-8 rounded-lg bg-emsDark border border-emsBorder text-xs text-gray-400 hover:text-white flex items-center justify-center font-bold">▲</button>
+                            <button onclick="moveRankPosition(${index}, 1)" class="w-8 h-8 rounded-lg bg-emsDark border border-emsBorder text-xs text-gray-400 hover:text-white flex items-center justify-center font-bold">▼</button>
+                            <button onclick="deleteCustomRank(${index})" class="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-400 hover:bg-red-500 hover:text-black flex items-center justify-center ml-2">🗑️</button>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        function saveCustomRank() {
+            const name = document.getElementById('rank-input-name').value.trim().toUpperCase();
+            if(!name) return showToast('Ketik nama pangkat jabatan kustom!', 'danger');
+
+            if(jabatanData.includes(name)) return showToast('Nama pangkat tersebut sudah ada!', 'warning');
+
+            jabatanData.push(name);
+            localStorage.setItem('vrp_jabatan', JSON.stringify(jabatanData));
+            document.getElementById('rank-input-name').value = '';
+            showToast('Pangkat kustom berhasil dipasang ke sirkulasi organisasi');
+            refreshAllDashboardComponents();
+            syncFormSelectors();
+        }
+
+        function moveRankPosition(index, direction) {
+            const targetIdx = index + direction;
+            if(targetIdx < 0 || targetIdx >= jabatanData.length) return;
+            // Swap array element
+            const temp = jabatanData[index];
+            jabatanData[index] = jabatanData[targetIdx];
+            jabatanData[targetIdx] = temp;
+
+            localStorage.setItem('vrp_jabatan', JSON.stringify(jabatanData));
+            refreshAllDashboardComponents();
+            syncFormSelectors();
+        }
+
+        function deleteCustomRank(index) {
+            if(!confirm('Hapus tingkatan pangkat ini dari kamus database?')) return;
+            jabatanData.splice(index, 1);
+            localStorage.setItem('vrp_jabatan', JSON.stringify(jabatanData));
+            showToast('Tingkatan jabatan dicabut', 'danger');
+            refreshAllDashboardComponents();
+            syncFormSelectors();
+        }
+
+        function resetAllDataFromCloud() {
+            if(!confirm('⚠️ DANGER ZONE!\nApakah lo yakin ingin melakukan WIPE DATA total menghapus seluruh data lokal absensi dari storage?')) return;
+            absensiData = [];
+            localStorage.removeItem('vrp_absensi');
+            showToast('Wipe out pembersihan total sukses!', 'danger');
+            refreshAllDashboardComponents();
+        }
+
+        // --- 7. EXPORT DATA FILES LOGISTICS MODULE ---
+        function exportToExcelVRP() {
+            const targetWeekKey = getWeekKeyFromDate(new Date(document.getElementById('rekap-filter-date').value));
+            const activeLogs = absensiData.filter(r => r.weekKey === targetWeekKey);
+            
+            if(activeLogs.length === 0) return showToast('Tidak ada data rekap untuk diekspor ke Excel pekan ini', 'warning');
+
+            const dataArray = activeLogs.map((r, i) => ({
+                'No': i+1, 'Nama Petugas': r.nama, 'Jabatan': r.jabatan, 'Tanggal': r.tanggal, 'Hari': r.hari,
+                'Jam Masuk': r.jamMasuk, 'Jam Keluar': r.jamKeluar, 'Total Jam (h)': r.totalDuty,
+                'Treatment': r.treatment, 'Pingsan': r.pingsan, 'Alprazolam': r.alprazolam
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(dataArray);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Absensi EMSVRP");
+            XLSX.writeFile(wb, `Laporan_Absensi_EMSVRP_Minggu_${targetWeekKey}.xlsx`);
+            showToast('Data berhasil diexport ke Excel (.xlsx)');
+        }
+
+        function exportToPDFVRP() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const targetWeekKey = getWeekKeyFromDate(new Date(document.getElementById('rekap-filter-date').value));
+
+            doc.setFont("Helvetica", "bold");
+            doc.text("LAPORAN REKAPITULASI DATA ABSENSI EMSVRP VALORIA", 14, 15);
+            doc.setFontSize(10);
+            doc.setFont("Helvetica", "normal");
+            doc.text(`Periode Kunci Minggu Kontrak: ${targetWeekKey} (Minggu s/d Sabtu)`, 14, 22);
+
+            const activeLogs = absensiData.filter(r => r.weekKey === targetWeekKey);
+            const rows = activeLogs.map((r, i) => [
+                i+1, r.nama, r.jabatan, r.tanggal, r.hari, r.jamMasuk, r.jamKeluar, `${r.totalDuty.toFixed(1)}h`, r.treatment, r.pingsan, r.alprazolam
+            ]);
+
+            doc.autoTable({
+                head: [['No', 'Nama', 'Jabatan', 'Tanggal', 'Hari', 'Masuk', 'Keluar', 'Duty', 'T', 'P', 'A']],
+                body: rows,
+                startY: 28,
+                theme: 'grid',
+                headStyles: { fillColor: [108, 92, 231] },
+                styles: { fontSize: 8 }
+            });
+
+            doc.save(`Laporan_EMSVRP_Minggu_${targetWeekKey}.pdf`);
+            showToast('Data berhasil diexport ke PDF (.pdf)');
+        }
+
+        function exportToWordVRP() {
+            const targetWeekKey = getWeekKeyFromDate(new Date(document.getElementById('rekap-filter-date').value));
+            // Simulasi ekspor text file docx via browser download data text payload
+            let textOutput = `LAPORAN FORMAL ABSENSI DATA EMSVRP\n`;
+            textOutput += `Periode Minggu Kontrak: ${targetWeekKey}\n`;
+            textOutput += `=========================================\n\n`;
+
+            const activeLogs = absensiData.filter(r => r.weekKey === targetWeekKey);
+            activeLogs.forEach((r, i) => {
+                textOutput += `${i+1}. Nama: ${r.nama} | Jabatan: ${r.jabatan} | Jam: ${r.jamMasuk}-${r.jamKeluar} | T:${r.treatment} P:${r.pingsan} A:${r.alprazolam}\n`;
+            });
+
+            const blob = new Blob([textOutput], { type: "application/msword" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `Laporan_EMSVRP_Minggu_${targetWeekKey}.doc`;
+            link.click();
+            showToast('Laporan Word (.doc) berhasil digenerate');
+        }
+
+        function backupSystemJSON() {
+            const systemCore = {
+                absensi: absensiData,
+                anggota: anggotaData,
+                jabatan: jabatanData,
+                hargaHistory: hargaLayananHistory
+            };
+            const blob = new Blob([JSON.stringify(systemCore, null, 2)], { type: "application/json" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `BACKUP_CORE_SYSTEM_EMSVRP_${Date.now()}.json`;
+            link.click();
+            showToast('Core system JSON backup successfully exported');
+        }
+
+        function importSystemJSON(event) {
+            const file = event.target.files[0];
+            if(!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if(parsed.absensi && parsed.anggota && parsed.jabatan) {
+                        absensiData = parsed.absensi;
+                        anggotaData = parsed.anggota;
+                        jabatanData = parsed.jabatan;
+                        hargaLayananHistory = parsed.hargaHistory || {};
+
+                        localStorage.setItem('vrp_absensi', JSON.stringify(absensiData));
+                        localStorage.setItem('vrp_anggota', JSON.stringify(anggotaData));
+                        localStorage.setItem('vrp_jabatan', JSON.stringify(jabatanData));
+                        localStorage.setItem('vrp_harga_history', JSON.stringify(hargaLayananHistory));
+
+                        showToast('Database Core System JSON berhasil di-restore total!');
+                        refreshAllDashboardComponents();
+                        syncFormSelectors();
+                    } else {
+                        showToast('Struktur berkas JSON backup salah / tidak valid!', 'danger');
+                    }
+                } catch (err) {
+                    showToast('Gagal memparsing file berkas JSON', 'danger');
+                }
+            };
+            reader.readAsText(file);
+        }
+    </script>
 </body>
 </html>
