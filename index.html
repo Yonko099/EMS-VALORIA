@@ -1162,6 +1162,7 @@ canvas { max-height: 240px; }
                 </div>
                 <div class="handler-calc" id="calc-pingsan">0 × $0 = $0</div>
               </div>
+              <div class="card">
               <div class="handler-card">
                 <div class="handler-label">Treatment</div>
                 <div class="handler-input-row">
@@ -1170,6 +1171,7 @@ canvas { max-height: 240px; }
                   <button class="qty-btn" onclick="changeQty('treatment',1)">+</button>
                 </div>
                 <div class="handler-calc" id="calc-treatment">0 × $0 = $0</div>
+              </div>
               </div>
               <div class="handler-card">
                 <div class="handler-label">Alprazolam</div>
@@ -1424,7 +1426,7 @@ canvas { max-height: 240px; }
 
 <script>
 // ==================== 1. URL TERPUSAT STREAM DATA API SPREADSHEET (JSON MODE) ====================
-const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwuVhQx-pSh_57zNsG1YMrwE3RWfHF0xa41oB_fnrUdvn1Bwr5hObB-xD0FmWMynpMYCg/exec'; 
+const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyVR87uSWDciJcY9fY9H-r29-GywcbccKXmUTBTqYa_7rihvG4j2g6uqqtGPnGX_Oy25g/exec'; 
 
 let state = {
   staff: [],
@@ -1480,18 +1482,38 @@ function fetchGoogleSheetsCloudData(forceRender = false) {
       jabatan: s.jabatan
     }));
 
-    // 2. Sinkronisasi Data Absensi dari Cloud JSON Objek (Aman & Bebas dari Error CSV Bergeser)
+    // 2. Sinkronisasi Data Absensi dari Cloud JSON Objek (Dengan Parser Tanggal Multi-Format)
     state.attendance = resData.attendance.map(row => {
       const matchedStaff = state.staff.find(s => s.nama.toLowerCase().trim() === row.nama.toLowerCase().trim());
       const positionTag = matchedStaff ? matchedStaff.jabatan : 'EMT';
       
-      let formattedDate = row.mingguKontrak;
-      if (row.mingguKontrak.includes('/')) {
-        const [dd, mm, yyyy] = row.mingguKontrak.split('/');
-        formattedDate = `${yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`;
-      } else if (row.mingguKontrak.includes('-') && row.mingguKontrak.split('-')[0].length === 2) {
-        const [dd, mm, yyyy] = row.mingguKontrak.split('-');
-        formattedDate = `${yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`;
+      let formattedDate = "";
+      let tglRaw = row.mingguKontrak.trim();
+
+      // PARSER TANGGAL INTEGRASI: Mengatasi format M/D/YYYY (e.g., 5/24/2026), DD/MM/YYYY, dan YYYY-MM-DD
+      if (tglRaw.includes('/')) {
+        const parts = tglRaw.split('/');
+        if (parts[2] && parts[2].length === 4) {
+          // Deteksi apakah elemen pertama adalah Bulan (Format M/D/YYYY seperti screenshot spreadsheet user)
+          if (parseInt(parts[0]) <= 12 && parseInt(parts[1]) > 12) {
+            formattedDate = `${parts[2]}-${parts[0].padStart(2,'0')}-${parts[1].padStart(2,'0')}`;
+          } else {
+            // Format standar DD/MM/YYYY
+            formattedDate = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+          }
+        }
+      } else if (tglRaw.includes('-')) {
+        const parts = tglRaw.split('-');
+        if (parts[0].length === 4) {
+          formattedDate = tglRaw; // Sudah berformat ISO YYYY-MM-DD
+        } else {
+          formattedDate = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+        }
+      }
+
+      // Fallback pencegahan jika ada sel kosong atau baris rusak
+      if (!formattedDate || formattedDate.includes('undefined')) {
+        formattedDate = new Date().toISOString().split('T')[0];
       }
 
       const weekKey = getWeekKey(new Date(formattedDate + 'T00:00:00'));
@@ -1722,6 +1744,131 @@ function renderAll() {
   renderTarifHistory();
   renderExportStats();
   renderTodayTable();
+}
+
+function renderDashboard() {
+  const thisWeek = getWeekAttendance(0);
+
+  document.getElementById('stat-total-staf').textContent = state.staff.length;
+  const totalJam = thisWeek.reduce((s, a) => s + a.durasi, 0).toFixed(1);
+  document.getElementById('stat-jam-duty').textContent = totalJam + 'h';
+  const totalCases = thisWeek.reduce((s, a) => s + a.pingsan + a.treatment + a.alprazolam, 0);
+  document.getElementById('stat-penanganan').textContent = totalCases;
+  const totalIncome = thisWeek.reduce((s, a) => s + a.total, 0);
+  document.getElementById('stat-pemasukan').textContent = '$' + totalIncome.toLocaleString('id-ID');
+
+  document.getElementById('dash-week-label').textContent = getWeekLabel(0);
+
+  const recent = state.attendance.slice(-10).reverse();
+  const tbody = document.getElementById('recent-table');
+  if (!recent.length) {
+    tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state"><div class="icon">📋</div><div class="msg">Belum ada data absensi</div></div></td></tr>`;
+  } else {
+    tbody.innerHTML = recent.map(e => `
+      <tr>
+        <td><strong>${e.nama}</strong></td>
+        <td class="mono text-muted">${e.tanggal}</td>
+        <td><span class="badge ${getJabatanBadge(e.jabatan)}" style="font-size:10px">${e.jabatan}</span></td>
+        <td class="mono text-cyan">${e.masuk}</td>
+        <td class="mono text-cyan">${e.keluar}</td>
+        <td class="mono">${e.durasi}h</td>
+        <td>${e.pingsan}</td>
+        <td>${e.treatment}</td>
+        <td>${e.alprazolam}</td>
+        <td class="text-purple"><strong>$${e.total.toLocaleString('id-ID')}</strong></td>
+      </tr>
+    `).join('');
+  }
+
+  renderCharts(thisWeek);
+}
+
+function renderCharts(thisWeek) {
+  const chartDefaults = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { labels: { color: '#94A3B8', font: { family: 'Outfit', size: 12 } } } },
+    scales: {
+      x: { ticks: { color: '#64748B', font: { family: 'JetBrains Mono', size: 10 } }, grid: { color: 'rgba(42,42,74,0.3)' } },
+      y: { ticks: { color: '#64748B', font: { family: 'JetBrains Mono', size: 10 } }, grid: { color: 'rgba(42,42,74,0.3)' } }
+    }
+  };
+
+  const dutyByStaff = {};
+  thisWeek.forEach(e => { dutyByStaff[e.nama] = (dutyByStaff[e.nama] || 0) + e.durasi; });
+  const dutyLabels = Object.keys(dutyByStaff);
+  const dutyData = Object.values(dutyByStaff);
+
+  if (chartDuty) chartDuty.destroy();
+  const ctxDuty = document.getElementById('chart-duty').getContext('2d');
+  chartDuty = new Chart(ctxDuty, {
+    type: 'bar',
+    data: {
+      labels: dutyLabels.length ? dutyLabels : ['Tidak ada data'],
+      datasets: [{
+        label: 'Jam Duty',
+        data: dutyLabels.length ? dutyData : [0],
+        backgroundColor: 'rgba(139,92,246,0.5)',
+        borderColor: '#8B5CF6',
+        borderWidth: 1.5,
+        borderRadius: 4,
+      }]
+    },
+    options: { ...chartDefaults, plugins: { ...chartDefaults.plugins, legend: { display: false } } }
+  });
+
+  const totalP = thisWeek.reduce((s, a) => s + a.pingsan, 0);
+  const totalT = thisWeek.reduce((s, a) => s + a.treatment, 0);
+  const totalA = thisWeek.reduce((s, a) => s + a.alprazolam, 0);
+
+  if (chartPie) chartPie.destroy();
+  const ctxPie = document.getElementById('chart-pie').getContext('2d');
+  chartPie = new Chart(ctxPie, {
+    type: 'doughnut',
+    data: {
+      labels: ['Pingsan', 'Treatment', 'Alprazolam'],
+      datasets: [{
+        data: [totalP || 1, totalT || 1, totalA || 1],
+        backgroundColor: ['rgba(139,92,246,0.6)', 'rgba(6,182,212,0.6)', 'rgba(16,185,129,0.6)'],
+        borderColor: ['#8B5CF6', '#06B6D4', '#10B981'],
+        borderWidth: 1,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { color: '#94A3B8', padding: 12, font: { size: 11 } } } },
+      cutout: '60%',
+    }
+  });
+
+  const weekIncomes = [];
+  const weekLabels = [];
+  for (let i = -3; i <= 0; i++) {
+    const wEntries = getWeekAttendance(i);
+    weekIncomes.push(wEntries.reduce((s, a) => s + a.total, 0));
+    weekLabels.push(getWeekLabel(i).split('—')[0].trim());
+  }
+
+  if (chartIncome) chartIncome.destroy();
+  const ctxIncome = document.getElementById('chart-income').getContext('2d');
+  chartIncome = new Chart(ctxIncome, {
+    type: 'line',
+    data: {
+      labels: weekLabels,
+      datasets: [{
+        label: 'Pemasukan Seminggu Terakhir ($)',
+        data: weekIncomes,
+        borderColor: '#06B6D4',
+        backgroundColor: 'rgba(6,182,212,0.06)',
+        borderWidth: 2,
+        pointBackgroundColor: '#06B6D4',
+        pointRadius: 4,
+        fill: true,
+        tension: 0.3,
+      }]
+    },
+    options: { ...chartDefaults }
+  });
 }
 
 function renderStafTable() {
