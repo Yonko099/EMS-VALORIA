@@ -1565,7 +1565,7 @@ function populateStaffDropdown() {
   const currentSelected = el.value;
   el.innerHTML = '<option value="">— Pilih Anggota —</option>';
   state.staff.forEach(s => {
-    el.innerHTML += `<option value="${s.id}">${s.nama} — ${s.jabatan}</option>';
+    el.innerHTML += `<option value="${s.id}">${s.nama} — ${s.jabatan}</option>`;
   });
   if (currentSelected) el.value = currentSelected;
 }
@@ -1598,7 +1598,7 @@ function updateDurationDisplay() {
   const disp = document.getElementById('duration-display');
   if (masuk.length === 5 && keluar.length === 5) {
     const dur = calcDuration(masuk, keluar);
-    if (dur !== null && !isNaN(parseFloat(dur))) {
+    if (dur !== null) {
       disp.textContent = `⏱ Durasi Kerja: ${dur} jam`;
       disp.style.display = 'block';
       return;
@@ -2082,38 +2082,13 @@ function updateTopbarDate() {
   document.getElementById('recap-week-label').textContent = getWeekLabel(state.currentWeekOffset);
 }
 
-// HYBRID TIME PARSER ENGINE: Membaca format jam standar ("07:00") dan desimal Spreadsheet ("0.56")
 function calcDuration(masuk, keluar) {
-  if (masuk === undefined || keluar === undefined || masuk === null || keluar === null) return "0.0";
-  
-  let strMasuk = masuk.toString().trim();
-  let strKeluar = keluar.toString().trim();
-  
-  if (!strMasuk || !strKeluar) return "0.0";
-
-  // --- ENGINE 1: PARSING ANGKA DESIMAL GOOGLE SHEETS ---
-  let numMasuk = parseFloat(strMasuk.replace(',', '.'));
-  let numKeluar = parseFloat(strKeluar.replace(',', '.'));
-
-  if (!isNaN(numMasuk) && !isNaN(numKeluar) && !strMasuk.includes(':') && !strKeluar.includes(':')) {
-    let diffHari = numKeluar - numMasuk;
-    if (diffHari < 0) diffHari += 1; // Jika melewati tengah malam
-    return (diffHari * 24).toFixed(1);
-  }
-
-  // --- ENGINE 2: PARSING TEXT TIME FORMAT HH:MM ---
-  if (strMasuk.includes(':') && strKeluar.includes(':')) {
-    const [hm, mm] = strMasuk.split(':').map(Number);
-    const [hk, mk] = strKeluar.split(':').map(Number);
-    
-    if (isNaN(hm) || isNaN(mm) || isNaN(hk) || isNaN(mk)) return "0.0";
-    
-    let diffMenit = (hk * 60 + mk) - (hm * 60 + mm);
-    if (diffMenit < 0) diffMenit += 1440; // Jika melewati tengah malam
-    return (diffMenit / 60).toFixed(1);
-  }
-
-  return "0.0";
+  if(!masuk || !keluar) return 0;
+  const [hm, mm] = masuk.split(':').map(Number);
+  const [hk, mk] = keluar.split(':').map(Number);
+  let diff = (hk * 60 + mk) - (hm * 60 + mm);
+  if (diff < 0) diff += 1440;
+  return (diff / 60).toFixed(1);
 }
 
 function getWeekKey(date) { return getWeekStart(date).toISOString().split('T')[0]; }
