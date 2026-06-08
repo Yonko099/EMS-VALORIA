@@ -1062,13 +1062,17 @@ canvas { max-height: 240px; }
               <div class="card-title"><span class="dot"></span> Jam Duty per Anggota (Minggu Ini)</div>
               <div class="week-range-badge" id="dash-week-label">—</div>
             </div>
-            <canvas id="chart-duty" height="200"></canvas>
+            <div style="position:relative; height:200px;">
+              <canvas id="chart-duty"></canvas>
+            </div>
           </div>
           <div class="card">
             <div class="card-header">
               <div class="card-title"><span class="dot"></span> Distribusi Penanganan</div>
             </div>
-            <canvas id="chart-pie" height="200"></canvas>
+            <div style="position:relative; height:200px;">
+              <canvas id="chart-pie"></canvas>
+            </div>
           </div>
         </div>
 
@@ -1076,7 +1080,9 @@ canvas { max-height: 240px; }
           <div class="card-header">
             <div class="card-title"><span class="dot"></span> Tren Pemasukan per Minggu (4 Minggu Terakhir)</div>
           </div>
-          <canvas id="chart-income" height="120"></canvas>
+          <div style="position:relative; height:120px;">
+            <canvas id="chart-income"></canvas>
+          </div>
         </div>
 
         <div class="card">
@@ -1411,15 +1417,14 @@ canvas { max-height: 240px; }
         </div>
       </div>
 
-    </div></div></div><div id="toast-container"></div>
+    </div>
+  </div>
+</div>
+<div id="toast-container"></div>
 
 <script>
-// ==================== 1. URL GOOGLE SPREADSHEET DAN APPS SCRIPT JEMBATAN ====================
-const CSV_ABSEN_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQdcWhromy0EiLziCHqBFVXGEerb4FFwdOy2pq7LPus9z5fet0tHJFzmC_xvWxh96MzRIPOWWtJa3Jm/pub?gid=0&single=true&output=csv';
-const CSV_ANGGOTA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQdcWhromy0EiLziCHqBFVXGEerb4FFwdOy2pq7LPus9z5fet0tHJFzmC_xvWxh96MzRIPOWWtJa3Jm/pub?gid=422470466&single=true&output=csv';
-
-// ⚠️ PASTE URL GOOGLE APPS SCRIPT YANG SUDAH KAMU DEPLOY DI SINI
-const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyVR87uSWDciJcY9fY9H-r29-GywcbccKXmUTBTqYa_7rihvG4j2g6uqqtGPnGX_Oy25g/exec'; 
+// ==================== 1. URL TERPUSAT STREAM DATA API SPREADSHEET (JSON MODE) ====================
+const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwuVhQx-pSh_57zNsG1YMrwE3RWfHF0xa41oB_fnrUdvn1Bwr5hObB-xD0FmWMynpMYCg/exec'; 
 
 let state = {
   staff: [],
@@ -1430,8 +1435,7 @@ let state = {
   currentWeekOffset: 0,
 };
 
-let lastFetchedAbsenRaw = "";
-let lastFetchedAnggotaRaw = "";
+let lastFetchedJsonRaw = "";
 let chartDuty = null, chartPie = null, chartIncome = null;
 
 // ==================== 2. CORE SPREADSHEET ENGINE FETCHERS ====================
@@ -1456,71 +1460,63 @@ function fetchGoogleSheetsCloudData(forceRender = false) {
   statusContainer.className = "status-badge syncing";
   statusText.innerText = "Syncing Cloud...";
 
-  Promise.all([
-    fetch(CSV_ABSEN_URL + '&cachebust=' + Date.now()).then(res => res.text()),
-    fetch(CSV_ANGGOTA_URL + '&cachebust=' + Date.now()).then(res => res.text())
-  ])
-  .then(([csvAbsen, csvAnggota]) => {
-    if (!forceRender && csvAbsen === lastFetchedAbsenRaw && csvAnggota === lastFetchedAnggotaRaw) {
+  fetch(GOOGLE_APPS_SCRIPT_URL + '?cachebust=' + Date.now())
+  .then(res => res.json())
+  .then(resData => {
+    if (resData.status !== "success") { throw new Error("Akses Spreadsheet ditolak"); }
+
+    const stringified = JSON.stringify(resData);
+    if (!forceRender && stringified === lastFetchedJsonRaw) {
       statusContainer.className = "status-badge";
       statusText.innerText = "System Online";
       return;
     }
+    lastFetchedJsonRaw = stringified;
 
-    lastFetchedAbsenRaw = csvAbsen;
-    lastFetchedAnggotaRaw = csvAnggota;
-
-    const parsedAbsen = parseCSV(csvAbsen);
-    const parsedAnggota = parseCSV(csvAnggota);
-
-    state.staff = parsedAnggota.map((row, idx) => ({
+    // 1. Sinkronisasi Data Staf Resmi dari Cloud JSON Objek
+    state.staff = resData.staff.map((s, idx) => ({
       id: idx + 1,
-      nama: row['Nama Anggota'] || 'Unknown Staf',
-      jabatan: row['Jabatan'] || 'EMT'
-    })).filter(s => s.nama !== '');
+      nama: s.nama,
+      jabatan: s.jabatan
+    }));
 
-    state.attendance = parsedAbsen.map(row => {
-      const name = row['Nama Anggota'] || '';
-      const matchedStaff = state.staff.find(s => s.nama.toLowerCase() === name.toLowerCase());
-      const positionTag = matchedStaff ? matchedStaff.jabatan : (row['Jabatan'] || 'EMT');
+    // 2. Sinkronisasi Data Absensi dari Cloud JSON Objek (Aman & Bebas dari Error CSV Bergeser)
+    state.attendance = resData.attendance.map(row => {
+      const matchedStaff = state.staff.find(s => s.nama.toLowerCase().trim() === row.nama.toLowerCase().trim());
+      const positionTag = matchedStaff ? matchedStaff.jabatan : 'EMT';
       
-      const tglRaw = row['Minggu Kontrak'] ? row['Minggu Kontrak'].replace(/'/g, "").trim() : '';
-      let formattedDate = tglRaw;
-      
-      if (tglRaw.includes('/')) {
-        const [dd, mm, yyyy] = tglRaw.split('/');
+      let formattedDate = row.mingguKontrak;
+      if (row.mingguKontrak.includes('/')) {
+        const [dd, mm, yyyy] = row.mingguKontrak.split('/');
+        formattedDate = `${yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`;
+      } else if (row.mingguKontrak.includes('-') && row.mingguKontrak.split('-')[0].length === 2) {
+        const [dd, mm, yyyy] = row.mingguKontrak.split('-');
         formattedDate = `${yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`;
       }
 
-      const masuk = row['Jam Masuk'] || '00:00';
-      const keluar = row['Jam Keluar'] || '00:00';
-      const durasi = calcDuration(masuk, keluar);
-
-      const pingsan = parseInt(row['Pingsan']) || 0;
-      const treatment = parseInt(row['Treatment']) || 0;
-      const alprazolam = parseInt(row['Alprazolam']) || 0;
-
       const weekKey = getWeekKey(new Date(formattedDate + 'T00:00:00'));
-      const rateP = (state.pricingHistory[weekKey] && state.pricingHistory[weekKey].pingsan !== undefined) ? state.pricingHistory[weekKey].pingsan : state.pricing.pingsan;
-      const rateT = (state.pricingHistory[weekKey] && state.pricingHistory[weekKey].treatment !== undefined) ? state.pricingHistory[weekKey].treatment : state.pricing.treatment;
-      const rateA = (state.pricingHistory[weekKey] && state.pricingHistory[weekKey].alprazolam !== undefined) ? state.pricingHistory[weekKey].alprazolam : state.pricing.alprazolam;
+      const rateP = (state.pricingHistory[weekKey]?.pingsan !== undefined) ? state.pricingHistory[weekKey].pingsan : state.pricing.pingsan;
+      const rateT = (state.pricingHistory[weekKey]?.treatment !== undefined) ? state.pricingHistory[weekKey].treatment : state.pricing.treatment;
+      const rateA = (state.pricingHistory[weekKey]?.alprazolam !== undefined) ? state.pricingHistory[weekKey].alprazolam : state.pricing.alprazolam;
       
-      const totalCost = (pingsan * rateP) + (treatment * rateT) + (alprazolam * rateA);
+      const totalCost = (row.pingsan * rateP) + (row.treatment * rateT) + (row.alprazolam * rateA);
 
       return {
         id: Math.random(),
         staffId: matchedStaff ? matchedStaff.id : 999,
-        nama: name,
+        nama: row.nama,
         jabatan: positionTag,
         tanggal: formattedDate,
-        masuk: masuk,
-        keluar: keluar,
-        durasi: parseFloat(durasi || 0),
-        pingsan, treatment, alprazolam,
+        masuk: row.jamMasuk,
+        keluar: row.jamKeluar,
+        durasi: parseFloat(calcDuration(row.jamMasuk, row.jamKeluar) || 0),
+        pingsan: row.pingsan,
+        treatment: row.treatment,
+        alprazolam: row.alprazolam,
         total: totalCost,
         weekKey: weekKey
       };
-    }).filter(a => a.nama !== '');
+    });
 
     renderAll();
     populateStaffDropdown();
@@ -1529,7 +1525,7 @@ function fetchGoogleSheetsCloudData(forceRender = false) {
     statusText.innerText = "System Online";
   })
   .catch(err => {
-    console.error("Gagal menautkan cloud server Google Sheets: ", err);
+    console.error("Gagal sinkronisasi data via JSON Stream API: ", err);
     statusContainer.className = "status-badge error";
     statusText.innerText = "Sirkuit Terputus";
   });
@@ -1537,23 +1533,7 @@ function fetchGoogleSheetsCloudData(forceRender = false) {
 
 function forceRefreshCloudStream() {
   fetchGoogleSheetsCloudData(true);
-  showToast('Melakukan sinkronisasi ulang dengan Cloud Spreadsheet...', 'info');
-}
-
-function parseCSV(text) {
-  const lines = text.split('\n').map(line => line.split(','));
-  const headers = lines[0].map(h => h.trim().replace(/"/g, ''));
-  const result = [];
-  
-  for(let i=1; i<lines.length; i++) {
-    if(!lines[i] || lines[i].length < headers.length) continue;
-    const obj = {};
-    headers.forEach((header, index) => {
-      obj[header] = lines[i][index] ? lines[i][index].trim().replace(/"/g, '') : '';
-    });
-    if(Object.values(obj).some(v => v !== '')) result.push(obj);
-  }
-  return result;
+  showToast('Sinkronisasi ulang database JSON berhasil dilakukan.', 'success');
 }
 
 // ==================== 3. ABSENSI INPUT CLOUD SINKRONISASI ====================
@@ -1666,34 +1646,32 @@ function submitAbsensiCloud() {
   const staff = state.staff.find(s => s.id == namaId);
   if (!staff) return;
 
-  const pingsan = document.getElementById('input-pingsan').value;
-  const treatment = document.getElementById('input-treatment').value;
-  const alprazolam = document.getElementById('input-alprazolam').value;
+  const pingsan = parseInt(document.getElementById('input-pingsan').value || 0);
+  const treatment = parseInt(document.getElementById('input-treatment').value || 0);
+  const alprazolam = parseInt(document.getElementById('input-alprazolam').value || 0);
   const hariLabel = document.getElementById('day-display').textContent;
 
-  // Sesuaikan konversi format tanggal agar masuk ke kolom 'Minggu Kontrak' Google Sheets
   const [yyyy, mm, dd] = tanggal.split('-');
   const tanggalKontrakFormat = `${dd}/${mm}/${yyyy}`;
 
   const payload = {
-    nama: staff.nama,
-    jabatan: staff.jabatan,
+    action: 'absen',
     mingguKontrak: tanggalKontrakFormat,
+    nama: staff.nama,
     hari: hariLabel,
     jamMasuk: masuk,
     jamKeluar: keluar,
-    pingsan: pingsan,
     treatment: treatment,
+    pingsan: pingsan,
     alprazolam: alprazolam
   };
 
   btnSubmit.disabled = true;
   btnSubmit.innerText = "⏳ Mengirim data ke Cloud...";
 
-  // Tembak data via POST ke Google Apps Script API Bridge
   fetch(GOOGLE_APPS_SCRIPT_URL, {
     method: 'POST',
-    mode: 'no-cors', // mode aman CORS statis web pages
+    mode: 'no-cors',
     cache: 'no-cache',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
@@ -1701,7 +1679,7 @@ function submitAbsensiCloud() {
   .then(() => {
     showToast(`Absensi ${staff.nama} Berhasil Dikirim ke Spreadsheet!`, 'success');
     resetForm();
-    setTimeout(() => fetchGoogleSheetsCloudData(true), 2000); // Tarik data baru
+    setTimeout(() => fetchGoogleSheetsCloudData(true), 2000);
   })
   .catch(err => {
     console.error(err);
@@ -1744,131 +1722,6 @@ function renderAll() {
   renderTarifHistory();
   renderExportStats();
   renderTodayTable();
-}
-
-function renderDashboard() {
-  const thisWeek = getWeekAttendance(0);
-
-  document.getElementById('stat-total-staf').textContent = state.staff.length;
-  const totalJam = thisWeek.reduce((s, a) => s + a.durasi, 0).toFixed(1);
-  document.getElementById('stat-jam-duty').textContent = totalJam + 'h';
-  const totalCases = thisWeek.reduce((s, a) => s + a.pingsan + a.treatment + a.alprazolam, 0);
-  document.getElementById('stat-penanganan').textContent = totalCases;
-  const totalIncome = thisWeek.reduce((s, a) => s + a.total, 0);
-  document.getElementById('stat-pemasukan').textContent = '$' + totalIncome.toLocaleString('id-ID');
-
-  document.getElementById('dash-week-label').textContent = getWeekLabel(0);
-
-  const recent = state.attendance.slice(-10).reverse();
-  const tbody = document.getElementById('recent-table');
-  if (!recent.length) {
-    tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state"><div class="icon">📋</div><div class="msg">Belum ada data absensi</div></div></td></tr>`;
-  } else {
-    tbody.innerHTML = recent.map(e => `
-      <tr>
-        <td><strong>${e.nama}</strong></td>
-        <td class="mono text-muted">${e.tanggal}</td>
-        <td><span class="badge ${getJabatanBadge(e.jabatan)}" style="font-size:10px">${e.jabatan}</span></td>
-        <td class="mono text-cyan">${e.masuk}</td>
-        <td class="mono text-cyan">${e.keluar}</td>
-        <td class="mono">${e.durasi}h</td>
-        <td>${e.pingsan}</td>
-        <td>${e.treatment}</td>
-        <td>${e.alprazolam}</td>
-        <td class="text-purple"><strong>$${e.total.toLocaleString('id-ID')}</strong></td>
-      </tr>
-    `).join('');
-  }
-
-  renderCharts(thisWeek);
-}
-
-function renderCharts(thisWeek) {
-  const chartDefaults = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: { legend: { labels: { color: '#94A3B8', font: { family: 'Outfit', size: 12 } } } },
-    scales: {
-      x: { ticks: { color: '#64748B', font: { family: 'JetBrains Mono', size: 10 } }, grid: { color: 'rgba(42,42,74,0.3)' } },
-      y: { ticks: { color: '#64748B', font: { family: 'JetBrains Mono', size: 10 } }, grid: { color: 'rgba(42,42,74,0.3)' } }
-    }
-  };
-
-  const dutyByStaff = {};
-  thisWeek.forEach(e => { dutyByStaff[e.nama] = (dutyByStaff[e.nama] || 0) + e.durasi; });
-  const dutyLabels = Object.keys(dutyByStaff);
-  const dutyData = Object.values(dutyByStaff);
-
-  if (chartDuty) chartDuty.destroy();
-  const ctxDuty = document.getElementById('chart-duty').getContext('2d');
-  chartDuty = new Chart(ctxDuty, {
-    type: 'bar',
-    data: {
-      labels: dutyLabels.length ? dutyLabels : ['Tidak ada data'],
-      datasets: [{
-        label: 'Jam Duty',
-        data: dutyLabels.length ? dutyData : [0],
-        backgroundColor: 'rgba(139,92,246,0.5)',
-        borderColor: '#8B5CF6',
-        borderWidth: 1.5,
-        borderRadius: 4,
-      }]
-    },
-    options: { ...chartDefaults, plugins: { ...chartDefaults.plugins, legend: { display: false } } }
-  });
-
-  const totalP = thisWeek.reduce((s, a) => s + a.pingsan, 0);
-  const totalT = thisWeek.reduce((s, a) => s + a.treatment, 0);
-  const totalA = thisWeek.reduce((s, a) => s + a.alprazolam, 0);
-
-  if (chartPie) chartPie.destroy();
-  const ctxPie = document.getElementById('chart-pie').getContext('2d');
-  chartPie = new Chart(ctxPie, {
-    type: 'doughnut',
-    data: {
-      labels: ['Pingsan', 'Treatment', 'Alprazolam'],
-      datasets: [{
-        data: [totalP || 1, totalT || 1, totalA || 1],
-        backgroundColor: ['rgba(139,92,246,0.6)', 'rgba(6,182,212,0.6)', 'rgba(16,185,129,0.6)'],
-        borderColor: ['#8B5CF6', '#06B6D4', '#10B981'],
-        borderWidth: 1,
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom', labels: { color: '#94A3B8', padding: 12, font: { size: 11 } } } },
-      cutout: '60%',
-    }
-  });
-
-  const weekIncomes = [];
-  const weekLabels = [];
-  for (let i = -3; i <= 0; i++) {
-    const wEntries = getWeekAttendance(i);
-    weekIncomes.push(wEntries.reduce((s, a) => s + a.total, 0));
-    weekLabels.push(getWeekLabel(i).split('—')[0].trim());
-  }
-
-  if (chartIncome) chartIncome.destroy();
-  const ctxIncome = document.getElementById('chart-income').getContext('2d');
-  chartIncome = new Chart(ctxIncome, {
-    type: 'line',
-    data: {
-      labels: weekLabels,
-      datasets: [{
-        label: 'Pemasukan Seminggu Terakhir ($)',
-        data: weekIncomes,
-        borderColor: '#06B6D4',
-        backgroundColor: 'rgba(6,182,212,0.06)',
-        borderWidth: 2,
-        pointBackgroundColor: '#06B6D4',
-        pointRadius: 4,
-        fill: true,
-        tension: 0.3,
-      }]
-    },
-    options: { ...chartDefaults }
-  });
 }
 
 function renderStafTable() {
@@ -2102,7 +1955,7 @@ function getWeekAttendance(offset = 0) {
 }
 
 function getJabatanBadge(jab) {
-  const map = { 'HEAD OF EMS': 'badge-purple', 'DEPUTY OF EMS': 'badge-cyan', 'SECRETARIAT': 'badge-yellow', 'DOKTER': 'badge-green', 'EMT': 'badge-cyan', 'TRAINEE': 'badge-red' };
+  const map = { 'HEAD OF EMS': 'badge-purple', 'DEPUTY OF EMS': 'badge-cyan', 'SECRETARIAT': 'badge-yellow', 'DOKTER': 'badge-green', 'PARAMEDIC': 'badge-green', 'EMT': 'badge-cyan', 'TRAINEE': 'badge-red' };
   return map[jab?.toUpperCase()] || 'badge-purple';
 }
 
@@ -2177,8 +2030,9 @@ function exportExcel() {
 
 function exportPDF() {
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
   const data = getFilteredAttendance();
+  if (!data.length) { showToast('Tidak ada data untuk diekspor', 'error'); return; }
+  const doc = new jsPDF();
   
   doc.setFillColor(15, 15, 26); doc.rect(0, 0, 210, 35, 'F');
   doc.setTextColor(167, 139, 250); doc.setFontSize(22); doc.setFont('helvetica', 'bold'); doc.text('EMS VALORIA HQ', 14, 18);
