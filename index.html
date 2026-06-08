@@ -1162,7 +1162,7 @@ canvas { max-height: 240px; }
                 </div>
                 <div class="handler-calc" id="calc-pingsan">0 × $0 = $0</div>
               </div>
-              <div class="card">
+              
               <div class="handler-card">
                 <div class="handler-label">Treatment</div>
                 <div class="handler-input-row">
@@ -1172,7 +1172,7 @@ canvas { max-height: 240px; }
                 </div>
                 <div class="handler-calc" id="calc-treatment">0 × $0 = $0</div>
               </div>
-              </div>
+              
               <div class="handler-card">
                 <div class="handler-label">Alprazolam</div>
                 <div class="handler-input-row">
@@ -1426,7 +1426,7 @@ canvas { max-height: 240px; }
 
 <script>
 // ==================== 1. URL TERPUSAT STREAM DATA API SPREADSHEET (JSON MODE) ====================
-const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzShHA1vT9SnUNvEPIIQg86GHI0zbnY5vXbKhV0NFPXpByXcSDjM7DaxSCxK704gITA/exec'; 
+const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwlni82psUxe0n4FES6lb58GdM_NWRtKNoA_K8gn8xsw8s1hYA1uT6MrTMiIxHIkRmSTg/exec'; 
 
 let state = {
   staff: [],
@@ -1783,6 +1783,61 @@ function renderDashboard() {
   renderCharts(thisWeek);
 }
 
+// UNIVERSAL TIME PARSER ENGINE: Mengatasi objek jam Date ISO dari Google, teks string jam HH:MM, dan format desimal
+function calcDuration(masuk, keluar) {
+  if (masuk === undefined || keluar === undefined || masuk === null || keluar === null) return "0.0";
+
+  // --- DETEKSI TINGKAT 1: JIKA TERBACA OBJEK JAVASCRIPT DATE MURNI ---
+  if (masuk instanceof Date || (typeof masuk === 'object' && masuk.getHours !== undefined)) {
+    let jamM = masuk.getHours();
+    let menitM = masuk.getMinutes();
+    let jamK = keluar.getHours();
+    let menitK = keluar.getMinutes();
+    
+    let diffMenit = (jamK * 60 + menitK) - (jamM * 60 + menitM);
+    if (diffMenit < 0) diffMenit += 1440;
+    return (diffMenit / 60).toFixed(1);
+  }
+
+  // Ubah tipe data apapun ke string teks murni
+  let strMasuk = masuk.toString().trim();
+  let strKeluar = keluar.toString().trim();
+  
+  if (!strMasuk || !strKeluar) return "0.0";
+
+  // --- DETEKSI TINGKAT 2: JIKA BERBENTUK ISO TIMESTAMP (Contoh: "1899-12-30T16:00:00.000Z") ---
+  if (strMasuk.includes('T') && strMasuk.includes('.')) {
+    strMasuk = strMasuk.split('T')[1].substring(0, 5); 
+  }
+  if (strKeluar.includes('T') && strKeluar.includes('.')) {
+    strKeluar = strKeluar.split('T')[1].substring(0, 5);
+  }
+
+  // --- DETEKSI TINGKAT 3: JIKA FORMAT TEKS JAM STANDAR ATAU HASIL STRIPPER DI ATAS ("16:00") ---
+  if (strMasuk.includes(':') && strKeluar.includes(':')) {
+    const [hm, mm] = strMasuk.split(':').map(Number);
+    const [hk, mk] = strKeluar.split(':').map(Number);
+    
+    if (!isNaN(hm) && !isNaN(mm) && !isNaN(hk) && !isNaN(mk)) {
+      let diffMenit = (hk * 60 + mk) - (hm * 60 + mm);
+      if (diffMenit < 0) diffMenit += 1440; // Proteksi tengah malam
+      return (diffMenit / 60).toFixed(1);
+    }
+  }
+
+  // --- DETEKSI TINGKAT 4: JIKA BERBENTUK PECAHAN DESIMAL HARI ---
+  let numMasuk = parseFloat(strMasuk.replace(',', '.'));
+  let numKeluar = parseFloat(strKeluar.replace(',', '.'));
+
+  if (!isNaN(numMasuk) && !isNaN(numKeluar)) {
+    let diffHari = numKeluar - numMasuk;
+    if (diffHari < 0) diffHari += 1;
+    return (diffHari * 24).toFixed(1);
+  }
+
+  return "0.0";
+}
+
 function renderCharts(thisWeek) {
   const chartDefaults = {
     responsive: true,
@@ -2082,53 +2137,6 @@ function updateTopbarDate() {
   document.getElementById('recap-week-label').textContent = getWeekLabel(state.currentWeekOffset);
 }
 
-// UNIVERSAL TIME PARSER ENGINE: Membaca objek Date Google, string teks HH:MM, dan desimal hari
-function calcDuration(masuk, keluar) {
-  if (masuk === undefined || keluar === undefined || masuk === null || keluar === null) return "0.0";
-
-  // --- TINGKAT 1: JIKA TERDETEKSI DATA OBJEK WAKTU ASLI (DATE OBJECT) DARI SPREADSHEET ---
-  if (masuk instanceof Date || (typeof masuk === 'object' && masuk.getHours !== undefined)) {
-    let jamM = masuk.getHours();
-    let menitM = masuk.getMinutes();
-    let jamK = keluar.getHours();
-    let menitK = keluar.getMinutes();
-    
-    let diffMenit = (jamK * 60 + menitK) - (jamM * 60 + menitM);
-    if (diffMenit < 0) diffMenit += 1440; // Proteksi jika shift melewati tengah malam
-    return (diffMenit / 60).toFixed(1);
-  }
-
-  // Konversi data ke teks string murni untuk parser tingkat berikutnya
-  let strMasuk = masuk.toString().trim();
-  let strKeluar = keluar.toString().trim();
-  
-  if (!strMasuk || !strKeluar) return "0.0";
-
-  // --- TINGKAT 2: JIKA FORMAT STRING MEMILIKI DUA TITIK (Contoh Teks Jam "16:00") ---
-  if (strMasuk.includes(':') && strKeluar.includes(':')) {
-    const [hm, mm] = strMasuk.split(':').map(Number);
-    const [hk, mk] = strKeluar.split(':').map(Number);
-    
-    if (!isNaN(hm) && !isNaN(mm) && !isNaN(hk) && !isNaN(mk)) {
-      let diffMenit = (hk * 60 + mk) - (hm * 60 + mm);
-      if (diffMenit < 0) diffMenit += 1440; // Proteksi tengah malam
-      return (diffMenit / 60).toFixed(1);
-    }
-  }
-
-  // --- TINGKAT 3: JIKA FORMAT MENJADI PECAHAN DESIMAL BULAT (Contoh Angka Jam 0.56) ---
-  let numMasuk = parseFloat(strMasuk.replace(',', '.'));
-  let numKeluar = parseFloat(strKeluar.replace(',', '.'));
-
-  if (!isNaN(numMasuk) && !isNaN(numKeluar)) {
-    let diffHari = numKeluar - numMasuk;
-    if (diffHari < 0) diffHari += 1;
-    return (diffHari * 24).toFixed(1);
-  }
-
-  return "0.0";
-}
-
 function getWeekKey(date) { return getWeekStart(date).toISOString().split('T')[0]; }
 
 function getWeekAttendance(offset = 0) {
@@ -2139,7 +2147,6 @@ function getWeekAttendance(offset = 0) {
   return state.attendance.filter(a => a.tanggal >= start && a.tanggal <= end);
 }
 
-// KONFIGURASI BADGE STRUKTUR JABATAN RESMI EMS VALORIA
 function getJabatanBadge(jab) {
   const map = { 'HEAD OF EMS': 'badge-purple', 'DEPUTY OF EMS': 'badge-cyan', 'SECRETARIAT': 'badge-yellow', 'DOKTER': 'badge-green', 'PARAMEDIC': 'badge-green', 'EMT': 'badge-cyan', 'TRAINEE': 'badge-red' };
   return map[jab?.toUpperCase()] || 'badge-purple';
@@ -2196,6 +2203,7 @@ function exportCSV() {
   a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
   a.download = `Laporan_EMS_Valoria_${Date.now()}.csv`;
   a.click();
+  a.remove();
   showToast('Berkas CSV Berhasil Didownload!', 'success');
 }
 
