@@ -1311,7 +1311,8 @@ canvas { max-height: 240px; }
                 <tr>
                   <th>Nama</th>
                   <th>Jabatan</th>
-                  <th>Total Sesi</th> <th>Total Jam</th>
+                  <th>Total Sesi</th>
+                  <th>Total Jam</th>
                   <th>Pingsan</th>
                   <th>Treatment</th>
                   <th>Alprazolam</th>
@@ -1474,14 +1475,12 @@ function fetchGoogleSheetsCloudData(forceRender = false) {
     }
     lastFetchedJsonRaw = stringified;
 
-    // 1. Sinkronisasi Data Staf Resmi dari Cloud JSON Objek
     state.staff = resData.staff.map((s, idx) => ({
       id: idx + 1,
       nama: s.nama,
       jabatan: s.jabatan
     }));
 
-    // 2. Sinkronisasi Data Absensi dari Cloud JSON Objek (Dengan Parser Tanggal Multi-Format)
     state.attendance = resData.attendance.map(row => {
       const matchedStaff = state.staff.find(s => s.nama.toLowerCase().trim() === row.nama.toLowerCase().trim());
       const positionTag = matchedStaff ? matchedStaff.jabatan : 'EMT';
@@ -1489,7 +1488,6 @@ function fetchGoogleSheetsCloudData(forceRender = false) {
       let formattedDate = "";
       let tglRaw = row.mingguKontrak.trim();
 
-      // PARSER TANGGAL INTEGRASI: Mengatasi format M/D/YYYY (e.g., 5/24/2026), DD/MM/YYYY, dan YYYY-MM-DD
       if (tglRaw.includes('/')) {
         const parts = tglRaw.split('/');
         if (parts[2] && parts[2].length === 4) {
@@ -1972,7 +1970,6 @@ function renderOrgList() {
   tree.innerHTML = treeHTML;
 }
 
-// ==================== ENGINE REKAP MINGGUAN (PERUBAHAN TOTAL SESI) ====================
 function renderRecap() {
   const entries = getWeekAttendance(state.currentWeekOffset);
   document.getElementById('recap-week-label').textContent = getWeekLabel(state.currentWeekOffset);
@@ -1995,7 +1992,7 @@ function renderRecap() {
       byStaff[e.nama] = { nama: e.nama, jabatan: e.jabatan, totalSesi: 0, jam: 0, pingsan: 0, treatment: 0, alprazolam: 0, total: 0 };
     }
     const s = byStaff[e.nama];
-    s.totalSesi += 1; // PERUBAHAN UTAMA: Menghitung total baris absen sebagai Sesi Kerja murni
+    s.totalSesi += 1; 
     s.jam += e.durasi;
     s.pingsan += e.pingsan;
     s.treatment += e.treatment;
@@ -2015,7 +2012,8 @@ function renderRecap() {
     <tr>
       <td><strong>${r.nama}</strong></td>
       <td><span class="badge ${getJabatanBadge(r.jabatan)}">${r.jabatan}</span></td>
-      <td class="mono text-green"><strong>${r.totalSesi} Sesi</strong></td> <td class="mono text-cyan">${r.jam.toFixed(1)}h</td>
+      <td class="mono text-green"><strong>${r.totalSesi} Sesi</strong></td> 
+      <td class="mono text-cyan">${r.jam.toFixed(1)}h</td>
       <td>${r.pingsan}</td>
       <td>${r.treatment}</td>
       <td>${r.alprazolam}</td>
@@ -2070,17 +2068,6 @@ function renderTarifHistory() {
   `).join('');
 }
 
-// ==================== NAVIGATION NAVIGATION SYSTEM ====================
-const PAGE_TITLES = {
-  dashboard: 'Dashboard Pemantauan',
-  absensi: 'Input Absensi Manual',
-  staf: 'Daftar Anggota Staf Aktif',
-  organisasi: 'Struktur Organisasi',
-  rekap: 'Rekap Mingguan',
-  tarif: 'Aturan Tarif',
-  export: 'Export Data Laporan',
-};
-
 function navigate(page) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -2099,19 +2086,21 @@ function navigate(page) {
   if(page === 'dashboard' || page === 'rekap' || page === 'staf') renderAll();
 }
 
-// ==================== UTILITIES TIME & DATE ENGINE ====================
+// ==================== RE-ENGINEERING CORE LOGIC KALENDER: MINGGU — SABTU ====================
 function getWeekStart(date) {
   const d = new Date(date);
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  return new Date(d.setDate(diff));
+  // d.getDay() mengembalikan angka 0 (Minggu) sampai 6 (Sabtu).
+  // Mengurangi tanggal hari ini dengan angka harinya murni menarik kalender mundur pas ke hari Minggu.
+  const diff = d.getDate() - d.getDay();
+  return new Date(new Date(d.setDate(diff)).setHours(0,0,0,0));
 }
 
 function getWeekEnd(date) {
   const s = getWeekStart(date);
   const e = new Date(s);
+  // Hari Minggu (0) + 6 Hari = Hari Sabtu murni sebagai akhir periode laporan.
   e.setDate(s.getDate() + 6);
-  return e;
+  return new Date(e.setHours(23,59,59,999));
 }
 
 function formatDate(d) { return d.toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' }); }
