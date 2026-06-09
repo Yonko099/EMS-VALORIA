@@ -1311,8 +1311,7 @@ canvas { max-height: 240px; }
                 <tr>
                   <th>Nama</th>
                   <th>Jabatan</th>
-                  <th>Hari Kerja</th>
-                  <th>Total Jam</th>
+                  <th>Total Sesi</th> <th>Total Jam</th>
                   <th>Pingsan</th>
                   <th>Treatment</th>
                   <th>Alprazolam</th>
@@ -1426,7 +1425,7 @@ canvas { max-height: 240px; }
 
 <script>
 // ==================== 1. URL TERPUSAT STREAM DATA API SPREADSHEET (JSON MODE) ====================
-const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwlni82psUxe0n4FES6lb58GdM_NWRtKNoA_K8gn8xsw8s1hYA1uT6MrTMiIxHIkRmSTg/exec'; 
+const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzShHA1vT9SnUNvEPIIQg86GHI0zbnY5vXbKhV0NFPXpByXcSDjM7DaxSCxK704gITA/exec'; 
 
 let state = {
   staff: [],
@@ -1494,24 +1493,21 @@ function fetchGoogleSheetsCloudData(forceRender = false) {
       if (tglRaw.includes('/')) {
         const parts = tglRaw.split('/');
         if (parts[2] && parts[2].length === 4) {
-          // Deteksi apakah elemen pertama adalah Bulan (Format M/D/YYYY seperti screenshot spreadsheet user)
           if (parseInt(parts[0]) <= 12 && parseInt(parts[1]) > 12) {
             formattedDate = `${parts[2]}-${parts[0].padStart(2,'0')}-${parts[1].padStart(2,'0')}`;
           } else {
-            // Format standar DD/MM/YYYY
             formattedDate = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
           }
         }
       } else if (tglRaw.includes('-')) {
         const parts = tglRaw.split('-');
         if (parts[0].length === 4) {
-          formattedDate = tglRaw; // Sudah berformat ISO YYYY-MM-DD
+          formattedDate = tglRaw; 
         } else {
           formattedDate = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
         }
       }
 
-      // Fallback pencegahan jika ada sel kosong atau baris rusak
       if (!formattedDate || formattedDate.includes('undefined')) {
         formattedDate = new Date().toISOString().split('T')[0];
       }
@@ -1783,11 +1779,10 @@ function renderDashboard() {
   renderCharts(thisWeek);
 }
 
-// UNIVERSAL TIME PARSER ENGINE: Mengatasi objek jam Date ISO dari Google, teks string jam HH:MM, dan format desimal
+// UNIVERSAL TIME PARSER ENGINE
 function calcDuration(masuk, keluar) {
   if (masuk === undefined || keluar === undefined || masuk === null || keluar === null) return "0.0";
 
-  // --- DETEKSI TINGKAT 1: JIKA TERBACA OBJEK JAVASCRIPT DATE MURNI ---
   if (masuk instanceof Date || (typeof masuk === 'object' && masuk.getHours !== undefined)) {
     let jamM = masuk.getHours();
     let menitM = masuk.getMinutes();
@@ -1799,13 +1794,11 @@ function calcDuration(masuk, keluar) {
     return (diffMenit / 60).toFixed(1);
   }
 
-  // Ubah tipe data apapun ke string teks murni
   let strMasuk = masuk.toString().trim();
   let strKeluar = keluar.toString().trim();
   
   if (!strMasuk || !strKeluar) return "0.0";
 
-  // --- DETEKSI TINGKAT 2: JIKA BERBENTUK ISO TIMESTAMP (Contoh: "1899-12-30T16:00:00.000Z") ---
   if (strMasuk.includes('T') && strMasuk.includes('.')) {
     strMasuk = strMasuk.split('T')[1].substring(0, 5); 
   }
@@ -1813,19 +1806,17 @@ function calcDuration(masuk, keluar) {
     strKeluar = strKeluar.split('T')[1].substring(0, 5);
   }
 
-  // --- DETEKSI TINGKAT 3: JIKA FORMAT TEKS JAM STANDAR ATAU HASIL STRIPPER DI ATAS ("16:00") ---
   if (strMasuk.includes(':') && strKeluar.includes(':')) {
     const [hm, mm] = strMasuk.split(':').map(Number);
     const [hk, mk] = strKeluar.split(':').map(Number);
     
     if (!isNaN(hm) && !isNaN(mm) && !isNaN(hk) && !isNaN(mk)) {
       let diffMenit = (hk * 60 + mk) - (hm * 60 + mm);
-      if (diffMenit < 0) diffMenit += 1440; // Proteksi tengah malam
+      if (diffMenit < 0) diffMenit += 1440; 
       return (diffMenit / 60).toFixed(1);
     }
   }
 
-  // --- DETEKSI TINGKAT 4: JIKA BERBENTUK PECAHAN DESIMAL HARI ---
   let numMasuk = parseFloat(strMasuk.replace(',', '.'));
   let numKeluar = parseFloat(strKeluar.replace(',', '.'));
 
@@ -1981,6 +1972,7 @@ function renderOrgList() {
   tree.innerHTML = treeHTML;
 }
 
+// ==================== ENGINE REKAP MINGGUAN (PERUBAHAN TOTAL SESI) ====================
 function renderRecap() {
   const entries = getWeekAttendance(state.currentWeekOffset);
   document.getElementById('recap-week-label').textContent = getWeekLabel(state.currentWeekOffset);
@@ -1999,9 +1991,11 @@ function renderRecap() {
 
   const byStaff = {};
   entries.forEach(e => {
-    if (!byStaff[e.nama]) byStaff[e.nama] = { nama: e.nama, jabatan: e.jabatan, days: new Set(), jam: 0, pingsan: 0, treatment: 0, alprazolam: 0, total: 0 };
+    if (!byStaff[e.nama]) {
+      byStaff[e.nama] = { nama: e.nama, jabatan: e.jabatan, totalSesi: 0, jam: 0, pingsan: 0, treatment: 0, alprazolam: 0, total: 0 };
+    }
     const s = byStaff[e.nama];
-    s.days.add(e.tanggal);
+    s.totalSesi += 1; // PERUBAHAN UTAMA: Menghitung total baris absen sebagai Sesi Kerja murni
     s.jam += e.durasi;
     s.pingsan += e.pingsan;
     s.treatment += e.treatment;
@@ -2021,8 +2015,7 @@ function renderRecap() {
     <tr>
       <td><strong>${r.nama}</strong></td>
       <td><span class="badge ${getJabatanBadge(r.jabatan)}">${r.jabatan}</span></td>
-      <td>${r.days.size} hari</td>
-      <td class="mono text-cyan">${r.jam.toFixed(1)}h</td>
+      <td class="mono text-green"><strong>${r.totalSesi} Sesi</strong></td> <td class="mono text-cyan">${r.jam.toFixed(1)}h</td>
       <td>${r.pingsan}</td>
       <td>${r.treatment}</td>
       <td>${r.alprazolam}</td>
@@ -2253,7 +2246,6 @@ function showToast(msg, type = 'info') {
   setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
 }
 
-// Inisialisasi Utama
 init();
 </script>
 </body>
