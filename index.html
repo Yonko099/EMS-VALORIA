@@ -340,7 +340,7 @@ body {
 /* STATS GRID */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 16px;
   margin-bottom: 20px;
 }
@@ -712,7 +712,7 @@ tbody td {
 /* RECAP TABLE */
 .recap-summary {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 10px;
   margin-bottom: 20px;
 }
@@ -785,6 +785,33 @@ tbody td {
 }
 
 /* TARIF TABLE */
+.gaji-table input.gaji-input {
+  width: 110px;
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 7px;
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 7px 10px;
+  text-align: right;
+}
+.gaji-table input.gaji-input:focus { outline: none; border-color: var(--purple); box-shadow: var(--glow-purple); }
+.gaji-formula {
+  margin-top: 14px; padding: 12px 14px;
+  background: rgba(6,182,212,0.07); border: 1px solid rgba(6,182,212,0.25);
+  border-radius: 10px; font-size: 12px; color: var(--cyan3);
+  font-family: 'JetBrains Mono', monospace;
+}
+.gaji-box {
+  margin-top: 10px; display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; background: rgba(6,182,212,0.07);
+  border: 1px solid rgba(6,182,212,0.25); border-radius: 10px;
+}
+.gaji-box .gaji-label { font-size: 12px; color: var(--cyan3); font-weight: 600; }
+.gaji-box .gaji-calc { font-size: 11px; color: var(--text3); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+.gaji-box .gaji-value { font-family: 'Rajdhani', sans-serif; font-size: 22px; font-weight: 700; color: var(--cyan3); }
 .tarif-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -995,7 +1022,7 @@ canvas { max-height: 240px; }
 
       <div class="nav-section">Sistem</div>
       <div class="nav-item" onclick="navigate('tarif')">
-        <span class="nav-icon">◎</span> Pengaturan Tarif
+        <span class="nav-icon">◎</span> Tarif & Gaji
       </div>
       <div class="nav-item" onclick="navigate('export')">
         <span class="nav-icon">⬖</span> Export Data
@@ -1054,6 +1081,12 @@ canvas { max-height: 240px; }
             <div class="stat-value" id="stat-pemasukan">$0</div>
             <div class="stat-change">Total pendapatan</div>
           </div>
+          <div class="stat-card cyan">
+            <div class="stat-icon">💵</div>
+            <div class="stat-label">Gaji Minggu Ini</div>
+            <div class="stat-value" id="stat-gaji">$0</div>
+            <div class="stat-change">Jam duty × tarif jabatan</div>
+          </div>
         </div>
 
         <div class="charts-grid mb16">
@@ -1104,6 +1137,7 @@ canvas { max-height: 240px; }
                   <th>Treatment</th>
                   <th>Alprazolam</th>
                   <th>Pendapatan</th>
+                  <th>Gaji</th>
                 </tr>
               </thead>
               <tbody id="recent-table"></tbody>
@@ -1122,7 +1156,7 @@ canvas { max-height: 240px; }
             <div class="form-grid">
               <div class="form-group">
                 <label class="form-label">👤 Nama Anggota</label>
-                <select class="form-select" id="input-nama" onchange="saveLastName()">
+                <select class="form-select" id="input-nama" onchange="saveLastName(); updateGajiForm()">
                   <option value="">— Pilih Anggota —</option>
                 </select>
               </div>
@@ -1192,6 +1226,14 @@ canvas { max-height: 240px; }
               <div class="total-value" id="form-total">$0</div>
             </div>
 
+            <div class="gaji-box">
+              <div>
+                <div class="gaji-label">💵 Estimasi Gaji Duty</div>
+                <div class="gaji-calc" id="gaji-form-calc">Pilih anggota & isi jam duty</div>
+              </div>
+              <div class="gaji-value" id="gaji-form-total">$0</div>
+            </div>
+
             <div style="margin-top:16px;display:flex;gap:10px">
               <button class="btn-primary" id="btn-submit-absensi" style="flex:1;justify-content:center;padding:12px" onclick="submitAbsensiCloud()">
                 ✓ Kirim ke Spreadsheet Cloud
@@ -1213,6 +1255,7 @@ canvas { max-height: 240px; }
                     <th>Jam</th>
                     <th>Durasi</th>
                     <th>Total</th>
+                    <th>Gaji</th>
                   </tr>
                 </thead>
                 <tbody id="today-table"></tbody>
@@ -1245,6 +1288,8 @@ canvas { max-height: 240px; }
                   <th>Total Absensi</th>
                   <th>Total Jam</th>
                   <th>Total Pendapatan</th>
+                  <th>Tarif / Jam</th>
+                  <th>Total Gaji</th>
                 </tr>
               </thead>
               <tbody id="staf-table"></tbody>
@@ -1303,6 +1348,10 @@ canvas { max-height: 240px; }
               <div class="recap-item-label">Pemasukan</div>
               <div class="recap-item-value" id="recap-pemasukan" style="color:var(--purple3)">$0</div>
             </div>
+            <div class="recap-item" style="background:rgba(6,182,212,0.1);border-color:rgba(6,182,212,0.3)">
+              <div class="recap-item-label">Total Gaji</div>
+              <div class="recap-item-value" id="recap-gaji" style="color:var(--cyan3)">$0</div>
+            </div>
           </div>
 
           <div class="table-wrapper">
@@ -1317,6 +1366,7 @@ canvas { max-height: 240px; }
                   <th>Treatment</th>
                   <th>Alprazolam</th>
                   <th>Pendapatan</th>
+                  <th>Gaji</th>
                 </tr>
               </thead>
               <tbody id="rekap-table"></tbody>
@@ -1352,6 +1402,55 @@ canvas { max-height: 240px; }
 
           <div style="padding:14px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:10px;font-size:12px;color:var(--yellow)">
             ⚠️ <strong>Sistem Histori Tarif Aktif:</strong> Mengubah angka di atas akan langsung memperbarui kalkulasi minggu rekap yang sedang kamu buka tanpa merusak database laporan minggu-minggu sebelumnya.
+          </div>
+        </div>
+
+        <div class="card mb16">
+          <div class="card-header">
+            <div class="card-title"><span class="dot"></span> Pengaturan Gaji per Jabatan (per Jam)</div>
+            <div style="font-size:11px;color:var(--text3);font-family:monospace">Gaji dihitung otomatis: durasi duty (jam) × tarif per jam jabatan</div>
+          </div>
+
+          <div class="table-wrapper">
+            <table class="gaji-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Jabatan</th>
+                  <th>Gaji per Jam ($)</th>
+                  <th>Jumlah Staf</th>
+                  <th>Jam Duty (Minggu Ini)</th>
+                  <th>Gaji (Minggu Ini)</th>
+                </tr>
+              </thead>
+              <tbody id="gaji-table"></tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="4" style="text-align:right;color:var(--text3)"><strong>TOTAL</strong></td>
+                  <td class="mono text-cyan" id="gaji-total-jam">0h</td>
+                  <td class="text-purple"><strong id="gaji-total-nominal">$0</strong></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <div class="gaji-formula">
+            ⏱ Contoh: DOKTER, duty 07:00 – 19:00 = 12 jam × tarif DOKTER per jam = gaji sesi tersebut.
+          </div>
+          <div style="margin-top:12px;padding:14px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:10px;font-size:12px;color:var(--yellow)">
+            ⚠️ <strong>Histori Gaji Aman:</strong> Perubahan tarif gaji berlaku mulai minggu berjalan. Minggu-minggu sebelumnya otomatis dikunci memakai tarif lama.
+          </div>
+        </div>
+
+        <div class="card mb16">
+          <div class="card-header">
+            <div class="card-title"><span class="dot"></span> Riwayat Tarif Gaji per Jam</div>
+          </div>
+          <div class="table-wrapper">
+            <table>
+              <thead id="gaji-history-head"></thead>
+              <tbody id="gaji-history-table"></tbody>
+            </table>
           </div>
         </div>
 
@@ -1426,7 +1525,7 @@ canvas { max-height: 240px; }
 
 <script>
 // ==================== 1. URL TERPUSAT STREAM DATA API SPREADSHEET (JSON MODE) ====================
-const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzShHA1vT9SnUNvEPIIQg86GHI0zbnY5vXbKhV0NFPXpByXcSDjM7DaxSCxK704gITA/exec'; 
+const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwlni82psUxe0n4FES6lb58GdM_NWRtKNoA_K8gn8xsw8s1hYA1uT6MrTMiIxHIkRmSTg/exec'; 
 
 let state = {
   staff: [],
@@ -1434,8 +1533,47 @@ let state = {
   positions: ['HEAD OF EMS','DEPUTY OF EMS','SECRETARIAT','DOKTER','PARAMEDIC','EMT','TRAINEE'],
   pricing: { pingsan: 50, treatment: 100, alprazolam: 75 },
   pricingHistory: JSON.parse(localStorage.getItem('ems_pricingHistory')) || {},
+  // Gaji per jam untuk setiap jabatan (USD/jam). Ubah dari menu "Tarif & Gaji".
+  salaryRates: JSON.parse(localStorage.getItem('ems_salaryRates')) || {
+    'HEAD OF EMS': 150, 'DEPUTY OF EMS': 125, 'SECRETARIAT': 100,
+    'DOKTER': 90, 'PARAMEDIC': 75, 'EMT': 60, 'TRAINEE': 40
+  },
+  salaryHistory: JSON.parse(localStorage.getItem('ems_salaryHistory')) || {},
   currentWeekOffset: 0,
 };
+
+const PAGE_TITLES = {
+  dashboard: 'Dashboard', absensi: 'Input Absensi', staf: 'Daftar Staf Aktif',
+  organisasi: 'Struktur Organisasi', rekap: 'Rekap Mingguan',
+  tarif: 'Tarif & Gaji', export: 'Export Data'
+};
+
+// ==================== GAJI PER JAM (PER JABATAN) ====================
+function normPos(j) { return (j || '').toString().toUpperCase().trim(); }
+
+function getSalaryRatesForWeek(weekKey) {
+  return state.salaryHistory[weekKey] || state.salaryRates;
+}
+
+function getHourlyRate(jabatan, weekKey) {
+  const rates = getSalaryRatesForWeek(weekKey);
+  return Number(rates[normPos(jabatan)]) || 0;
+}
+
+function calcGaji(durasiJam, jabatan, weekKey) {
+  return Math.round((Number(durasiJam) || 0) * getHourlyRate(jabatan, weekKey) * 100) / 100;
+}
+
+function fmtMoney(n) {
+  return '$' + (Number(n) || 0).toLocaleString('id-ID', { maximumFractionDigits: 2 });
+}
+
+function recalcAllGaji() {
+  state.attendance.forEach(a => {
+    a.rateJam = getHourlyRate(a.jabatan, a.weekKey);
+    a.gaji = calcGaji(a.durasi, a.jabatan, a.weekKey);
+  });
+}
 
 let lastFetchedJsonRaw = "";
 let chartDuty = null, chartPie = null, chartIncome = null;
@@ -1516,6 +1654,7 @@ function fetchGoogleSheetsCloudData(forceRender = false) {
       const rateA = (state.pricingHistory[weekKey]?.alprazolam !== undefined) ? state.pricingHistory[weekKey].alprazolam : state.pricing.alprazolam;
       
       const totalCost = (row.pingsan * rateP) + (row.treatment * rateT) + (row.alprazolam * rateA);
+      const durasiJam = parseFloat(calcDuration(row.jamMasuk, row.jamKeluar) || 0);
 
       return {
         id: Math.random(),
@@ -1525,7 +1664,9 @@ function fetchGoogleSheetsCloudData(forceRender = false) {
         tanggal: formattedDate,
         masuk: row.jamMasuk,
         keluar: row.jamKeluar,
-        durasi: parseFloat(calcDuration(row.jamMasuk, row.jamKeluar) || 0),
+        durasi: durasiJam,
+        rateJam: getHourlyRate(positionTag, weekKey),
+        gaji: calcGaji(durasiJam, positionTag, weekKey),
         pingsan: row.pingsan,
         treatment: row.treatment,
         alprazolam: row.alprazolam,
@@ -1586,7 +1727,31 @@ function maskTime(input) {
   updateDurationDisplay();
 }
 
+function updateGajiForm() {
+  const calcEl = document.getElementById('gaji-form-calc');
+  const totEl = document.getElementById('gaji-form-total');
+  if (!calcEl || !totEl) return;
+  const namaId = document.getElementById('input-nama').value;
+  const masuk = document.getElementById('input-masuk').value;
+  const keluar = document.getElementById('input-keluar').value;
+  const tgl = document.getElementById('input-tanggal').value;
+  const staff = state.staff.find(s => s.id == namaId);
+
+  if (!staff) { calcEl.textContent = 'Pilih anggota & isi jam duty'; totEl.textContent = '$0'; return; }
+  if (masuk.length !== 5 || keluar.length !== 5) {
+    calcEl.textContent = `${staff.jabatan} · ${fmtMoney(getHourlyRate(staff.jabatan, getWeekKey(new Date())))}/jam · isi jam duty`;
+    totEl.textContent = '$0';
+    return;
+  }
+  const dur = parseFloat(calcDuration(masuk, keluar)) || 0;
+  const weekKey = getWeekKey(tgl ? new Date(tgl + 'T00:00:00') : new Date());
+  const rate = getHourlyRate(staff.jabatan, weekKey);
+  calcEl.textContent = `${staff.jabatan} · ${dur}j × ${fmtMoney(rate)}/jam`;
+  totEl.textContent = fmtMoney(calcGaji(dur, staff.jabatan, weekKey));
+}
+
 function updateDurationDisplay() {
+  updateGajiForm();
   const masuk = document.getElementById('input-masuk').value;
   const keluar = document.getElementById('input-keluar').value;
   const disp = document.getElementById('duration-display');
@@ -1714,7 +1879,7 @@ function renderTodayTable() {
   document.getElementById('today-count').textContent = `${entries.length} Entri`;
 
   if (!entries.length) {
-    tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state"><div class="icon">📋</div><div class="msg">Belum ada entri absensi masuk di tanggal ini.</div></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="icon">📋</div><div class="msg">Belum ada entri absensi masuk di tanggal ini.</div></div></td></tr>`;
     return;
   }
 
@@ -1724,6 +1889,7 @@ function renderTodayTable() {
       <td class="mono text-cyan" style="font-size:12px">${e.masuk} – ${e.keluar}</td>
       <td class="mono">${e.durasi}h</td>
       <td class="text-purple"><strong>$${e.total.toLocaleString('id-ID')}</strong></td>
+      <td class="text-cyan"><strong>${fmtMoney(e.gaji)}</strong></td>
     </tr>
   `).join('');
 }
@@ -1735,7 +1901,9 @@ function renderAll() {
   renderOrgList();
   renderRecap();
   renderTarif();
+  renderGaji();
   renderTarifHistory();
+  renderGajiHistory();
   renderExportStats();
   renderTodayTable();
 }
@@ -1750,13 +1918,14 @@ function renderDashboard() {
   document.getElementById('stat-penanganan').textContent = totalCases;
   const totalIncome = thisWeek.reduce((s, a) => s + a.total, 0);
   document.getElementById('stat-pemasukan').textContent = '$' + totalIncome.toLocaleString('id-ID');
+  document.getElementById('stat-gaji').textContent = fmtMoney(thisWeek.reduce((s, a) => s + (a.gaji || 0), 0));
 
   document.getElementById('dash-week-label').textContent = getWeekLabel(0);
 
   const recent = state.attendance.slice(-10).reverse();
   const tbody = document.getElementById('recent-table');
   if (!recent.length) {
-    tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state"><div class="icon">📋</div><div class="msg">Belum ada data absensi</div></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="11"><div class="empty-state"><div class="icon">📋</div><div class="msg">Belum ada data absensi</div></div></td></tr>`;
   } else {
     tbody.innerHTML = recent.map(e => `
       <tr>
@@ -1770,6 +1939,7 @@ function renderDashboard() {
         <td>${e.treatment}</td>
         <td>${e.alprazolam}</td>
         <td class="text-purple"><strong>$${e.total.toLocaleString('id-ID')}</strong></td>
+        <td class="text-cyan"><strong>${fmtMoney(e.gaji)}</strong></td>
       </tr>
     `).join('');
   }
@@ -1921,7 +2091,7 @@ function renderStafTable() {
   let list = state.staff.filter(s => !search || s.nama.toLowerCase().includes(search) || s.jabatan.toLowerCase().includes(search));
 
   if (!list.length) {
-    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="icon">👥</div><div class="msg">Tidak ada anggota ditemukan</div></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="icon">👥</div><div class="msg">Tidak ada anggota ditemukan</div></div></td></tr>`;
     return;
   }
 
@@ -1929,6 +2099,8 @@ function renderStafTable() {
     const records = state.attendance.filter(a => a.nama.toLowerCase() === s.nama.toLowerCase());
     const totalJam = records.reduce((sum, a) => sum + a.durasi, 0).toFixed(1);
     const totalIncome = records.reduce((sum, a) => sum + a.total, 0);
+    const totalGaji = records.reduce((sum, a) => sum + (a.gaji || 0), 0);
+    const rateNow = getHourlyRate(s.jabatan, getWeekKey(new Date()));
     return `
       <tr>
         <td class="text-muted mono">${i+1}</td>
@@ -1937,6 +2109,8 @@ function renderStafTable() {
         <td>${records.length}x</td>
         <td class="mono text-cyan">${totalJam}h</td>
         <td class="text-purple"><strong>$${totalIncome.toLocaleString('id-ID')}</strong></td>
+        <td class="mono text-muted">${fmtMoney(rateNow)}/jam</td>
+        <td class="text-cyan"><strong>${fmtMoney(totalGaji)}</strong></td>
       </tr>
     `;
   }).join('');
@@ -1985,11 +2159,12 @@ function renderRecap() {
   document.getElementById('recap-treatment').textContent = totalTreatment;
   document.getElementById('recap-alprazolam').textContent = totalAlprazolam;
   document.getElementById('recap-pemasukan').textContent = '$' + totalIncome.toLocaleString('id-ID');
+  document.getElementById('recap-gaji').textContent = fmtMoney(entries.reduce((s, a) => s + (a.gaji || 0), 0));
 
   const byStaff = {};
   entries.forEach(e => {
     if (!byStaff[e.nama]) {
-      byStaff[e.nama] = { nama: e.nama, jabatan: e.jabatan, totalSesi: 0, jam: 0, pingsan: 0, treatment: 0, alprazolam: 0, total: 0 };
+      byStaff[e.nama] = { nama: e.nama, jabatan: e.jabatan, totalSesi: 0, jam: 0, pingsan: 0, treatment: 0, alprazolam: 0, total: 0, gaji: 0 };
     }
     const s = byStaff[e.nama];
     s.totalSesi += 1; 
@@ -1998,13 +2173,14 @@ function renderRecap() {
     s.treatment += e.treatment;
     s.alprazolam += e.alprazolam;
     s.total += e.total;
+    s.gaji += (e.gaji || 0);
   });
 
   const tbody = document.getElementById('rekap-table');
   const rows = Object.values(byStaff);
 
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="icon">📊</div><div class="msg">Tidak ada data penanganan pada minggu ini</div></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="icon">📊</div><div class="msg">Tidak ada data penanganan pada minggu ini</div></div></td></tr>`;
     return;
   }
 
@@ -2018,6 +2194,7 @@ function renderRecap() {
       <td>${r.treatment}</td>
       <td>${r.alprazolam}</td>
       <td class="text-purple"><strong>$${r.total.toLocaleString('id-ID')}</strong></td>
+      <td class="text-cyan"><strong>${fmtMoney(r.gaji)}</strong></td>
     </tr>
   `).join('');
 }
@@ -2049,6 +2226,97 @@ function saveTarif() {
   renderDashboard();
   renderRecap();
   renderTarifHistory();
+}
+
+let gajiTableBuilt = false;
+
+function renderGaji() {
+  const tbody = document.getElementById('gaji-table');
+  if (!tbody) return;
+  const wk = getWeekKey(new Date());
+  const rates = getSalaryRatesForWeek(wk);
+  const thisWeek = getWeekAttendance(0);
+
+  if (!gajiTableBuilt || tbody.children.length !== state.positions.length) {
+    tbody.innerHTML = state.positions.map((pos, i) => `
+      <tr>
+        <td class="mono text-muted">${i + 1}</td>
+        <td><span class="badge ${getJabatanBadge(pos)}">${pos}</span></td>
+        <td>$ <input type="number" class="gaji-input" id="gaji-rate-${i}" min="0" step="0.01" data-pos="${pos}" oninput="saveGaji()"> <span class="text-muted">/jam</span></td>
+        <td id="gaji-staf-${i}">0 orang</td>
+        <td class="mono text-cyan" id="gaji-jam-${i}">0h</td>
+        <td class="text-purple" id="gaji-est-${i}"><strong>$0</strong></td>
+      </tr>`).join('');
+    gajiTableBuilt = true;
+  }
+
+  let totJam = 0, totGaji = 0;
+  state.positions.forEach((pos, i) => {
+    const input = document.getElementById('gaji-rate-' + i);
+    if (input && document.activeElement !== input) input.value = rates[normPos(pos)] ?? 0;
+
+    const staf = state.staff.filter(s => normPos(s.jabatan) === normPos(pos)).length;
+    const rows = thisWeek.filter(a => normPos(a.jabatan) === normPos(pos));
+    const jam = rows.reduce((s, a) => s + a.durasi, 0);
+    const gaji = rows.reduce((s, a) => s + (a.gaji || 0), 0);
+    totJam += jam; totGaji += gaji;
+
+    document.getElementById('gaji-staf-' + i).textContent = staf + ' orang';
+    document.getElementById('gaji-jam-' + i).textContent = jam.toFixed(1) + 'h';
+    document.getElementById('gaji-est-' + i).innerHTML = '<strong>' + fmtMoney(gaji) + '</strong>';
+  });
+  document.getElementById('gaji-total-jam').textContent = totJam.toFixed(1) + 'h';
+  document.getElementById('gaji-total-nominal').textContent = fmtMoney(totGaji);
+}
+
+function saveGaji() {
+  const currentWeekKey = getWeekKey(new Date());
+  const oldRates = { ...getSalaryRatesForWeek(currentWeekKey) };
+
+  // Kunci tarif lama untuk minggu-minggu lampau yang belum punya histori,
+  // supaya perubahan tarif tidak mengubah gaji minggu sebelumnya.
+  state.attendance.forEach(a => {
+    if (a.weekKey < currentWeekKey && !state.salaryHistory[a.weekKey]) {
+      state.salaryHistory[a.weekKey] = { ...oldRates };
+    }
+  });
+
+  const newRates = {};
+  state.positions.forEach((pos, i) => {
+    const el = document.getElementById('gaji-rate-' + i);
+    newRates[normPos(pos)] = Math.max(0, parseFloat(el ? el.value : 0) || 0);
+  });
+
+  state.salaryRates = newRates;
+  state.salaryHistory[currentWeekKey] = { ...newRates };
+  localStorage.setItem('ems_salaryRates', JSON.stringify(state.salaryRates));
+  localStorage.setItem('ems_salaryHistory', JSON.stringify(state.salaryHistory));
+
+  recalcAllGaji();
+  renderDashboard();
+  renderStafTable();
+  renderRecap();
+  renderTodayTable();
+  renderGaji();
+  renderGajiHistory();
+  updateGajiForm();
+}
+
+function renderGajiHistory() {
+  const thead = document.getElementById('gaji-history-head');
+  const tbody = document.getElementById('gaji-history-table');
+  if (!thead || !tbody) return;
+  thead.innerHTML = '<tr><th>Minggu Mulai</th>' + state.positions.map(p => `<th>${p}</th>`).join('') + '</tr>';
+  const keys = Object.keys(state.salaryHistory).sort().reverse();
+  if (!keys.length) {
+    tbody.innerHTML = `<tr><td colspan="${state.positions.length + 1}"><div class="empty-state" style="padding:20px"><div class="msg">Belum ada riwayat perubahan tarif gaji.</div></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = keys.map(k => `
+    <tr>
+      <td class="mono text-cyan text-xs">${k}</td>
+      ${state.positions.map(p => `<td class="mono">${fmtMoney(state.salaryHistory[k][normPos(p)] || 0)}</td>`).join('')}
+    </tr>`).join('');
 }
 
 function renderTarifHistory() {
@@ -2178,8 +2446,8 @@ function getFilteredAttendance() {
 function exportCSV() {
   const data = getFilteredAttendance();
   if (!data.length) { showToast('Tidak ada data untuk diekspor', 'error'); return; }
-  const headers = ['Nama','Jabatan','Tanggal','Jam Masuk','Jam Keluar','Durasi (Jam)','Pingsan','Treatment','Alprazolam','Total ($)'];
-  const rows = data.map(a => [a.nama, a.jabatan, a.tanggal, a.masuk, a.keluar, a.durasi, a.pingsan, a.treatment, a.alprazolam, a.total]);
+  const headers = ['Nama','Jabatan','Tanggal','Jam Masuk','Jam Keluar','Durasi (Jam)','Tarif/Jam ($)','Gaji ($)','Pingsan','Treatment','Alprazolam','Total ($)'];
+  const rows = data.map(a => [a.nama, a.jabatan, a.tanggal, a.masuk, a.keluar, a.durasi, a.rateJam, a.gaji, a.pingsan, a.treatment, a.alprazolam, a.total]);
   const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
@@ -2192,13 +2460,17 @@ function exportCSV() {
 function exportExcel() {
   const data = getFilteredAttendance();
   const wb = XLSX.utils.book_new();
-  const absensiData = [['Nama','Jabatan','Tanggal','Jam Masuk','Jam Keluar','Durasi (Jam)','Pingsan','Treatment','Alprazolam','Total ($)']];
-  data.forEach(a => absensiData.push([a.nama, a.jabatan, a.tanggal, a.masuk, a.keluar, a.durasi, a.pingsan, a.treatment, a.alprazolam, a.total]));
+  const absensiData = [['Nama','Jabatan','Tanggal','Jam Masuk','Jam Keluar','Durasi (Jam)','Tarif/Jam ($)','Gaji ($)','Pingsan','Treatment','Alprazolam','Total ($)']];
+  data.forEach(a => absensiData.push([a.nama, a.jabatan, a.tanggal, a.masuk, a.keluar, a.durasi, a.rateJam, a.gaji, a.pingsan, a.treatment, a.alprazolam, a.total]));
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(absensiData), 'Absensi');
 
   const anggotaData = [['Nama Anggota','Jabatan Resmi']];
   state.staff.forEach(s => anggotaData.push([s.nama, s.jabatan]));
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(anggotaData), 'Daftar Anggota Staf');
+
+  const gajiData = [['Jabatan','Gaji per Jam ($)']];
+  state.positions.forEach(p => gajiData.push([p, getHourlyRate(p, getWeekKey(new Date()))]));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(gajiData), 'Tarif Gaji');
 
   XLSX.writeFile(wb, `Laporan_Excel_EMSVRP_${Date.now()}.xlsx`);
   showToast('Berkas Excel Berhasil Didownload!', 'success');
@@ -2214,10 +2486,10 @@ function exportPDF() {
   doc.setTextColor(167, 139, 250); doc.setFontSize(22); doc.setFont('helvetica', 'bold'); doc.text('EMS VALORIA HQ', 14, 18);
   doc.setFontSize(9); doc.setTextColor(103, 232, 249); doc.text('Laporan Resmi Data Absensi Manajemen Kasus Medis', 14, 27);
   
-  const formattedRows = data.map((a, i) => [i+1, a.nama, a.jabatan, a.tanggal, `${a.masuk}-${a.keluar}`, `${a.durasi}h`, a.pingsan, a.treatment, a.alprazolam, `$${a.total}`]);
+  const formattedRows = data.map((a, i) => [i+1, a.nama, a.jabatan, a.tanggal, `${a.masuk}-${a.keluar}`, `${a.durasi}h`, `$${a.gaji}`, a.pingsan, a.treatment, a.alprazolam, `$${a.total}`]);
   
   doc.autoTable({
-    head: [['No', 'Nama', 'Jabatan', 'Tanggal', 'Jam Kerja', 'Durasi', 'P', 'T', 'A', 'Total']],
+    head: [['No', 'Nama', 'Jabatan', 'Tanggal', 'Jam Kerja', 'Durasi', 'Gaji', 'P', 'T', 'A', 'Total']],
     body: formattedRows, startY: 42, theme: 'grid', headStyles: { fillColor: [139, 92, 246] }
   });
   
