@@ -639,7 +639,7 @@ tbody td {
 
 /* SEARCH */
 .search-box {
-  position: relative;        
+  position: relative;
   display: flex;
   align-items: center;
 }
@@ -1525,7 +1525,7 @@ canvas { max-height: 240px; }
 
 <script>
 // ==================== 1. URL TERPUSAT STREAM DATA API SPREADSHEET (JSON MODE) ====================
-const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxxdpjBUeiSMWw1vcE7uCYCBKgIPaROKuqwNIhZt3zZbmqfCKXob6Cpck5wgov0g8X--A/exec'; 
+const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwJ85tmxefSKfuFvzmi13VMKHCAUsMSjaVyyriZk0It033XmUBPv87xGWk7GW1X8yQ9kA/exec'; 
 
 let state = {
   staff: [],
@@ -1612,6 +1612,31 @@ function fetchGoogleSheetsCloudData(forceRender = false) {
       return;
     }
     lastFetchedJsonRaw = stringified;
+
+    // Tarif dari cloud (satu sumber untuk web & bot)
+    if (resData.tarif && !tarifMenungguKirim) {
+      const t = resData.tarif;
+      if ([t.pingsan, t.treatment, t.alprazolam].every(v => Number.isFinite(Number(v)))) {
+        state.pricing = { pingsan: Number(t.pingsan), treatment: Number(t.treatment), alprazolam: Number(t.alprazolam) };
+        state.pricingHistory[getWeekLabel(state.currentWeekOffset)] = { ...state.pricing };
+        localStorage.setItem('ems_pricingHistory', JSON.stringify(state.pricingHistory));
+        renderTarif();
+      }
+    }
+
+    // Gaji per jabatan dari cloud (satu sumber untuk web & bot)
+    if (Array.isArray(resData.jabatan) && resData.jabatan.length && !gajiMenungguKirim) {
+      const ratesCloud = { ...state.salaryRates };
+      resData.jabatan.forEach(j => {
+        if (j && j.nama && Number.isFinite(Number(j.gaji))) ratesCloud[normPos(j.nama)] = Number(j.gaji);
+      });
+      if (JSON.stringify(ratesCloud) !== JSON.stringify(state.salaryRates)) {
+        state.salaryRates = ratesCloud;
+        state.salaryHistory[getWeekKey(new Date())] = { ...ratesCloud };
+        localStorage.setItem('ems_salaryRates', JSON.stringify(state.salaryRates));
+        localStorage.setItem('ems_salaryHistory', JSON.stringify(state.salaryHistory));
+      }
+    }
 
     state.staff = resData.staff.map((s, idx) => ({
       id: idx + 1,
@@ -2206,6 +2231,24 @@ function renderTarif() {
   document.getElementById('tarif-alprazolam').value = state.pricing.alprazolam;
 }
 
+let tarifMenungguKirim = false, tarifTimer = null;
+function kirimTarifKeCloud() {
+  tarifMenungguKirim = true;
+  clearTimeout(tarifTimer);
+  tarifTimer = setTimeout(() => {
+    fetch(GOOGLE_APPS_SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      cache: 'no-cache',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'setTarif', pingsan: state.pricing.pingsan, treatment: state.pricing.treatment, alprazolam: state.pricing.alprazolam })
+    })
+    .then(() => showToast('Tarif tersimpan ke Cloud (bot ikut terupdate)', 'success'))
+    .catch(() => showToast('Gagal menyimpan tarif ke Cloud', 'error'))
+    .finally(() => { setTimeout(() => { tarifMenungguKirim = false; }, 3000); });
+  }, 800);
+}
+
 function saveTarif() {
   const currentWeekKey = getWeekLabel(state.currentWeekOffset);
   state.pricing = {
@@ -2216,6 +2259,7 @@ function saveTarif() {
   
   state.pricingHistory[currentWeekKey] = { ...state.pricing };
   localStorage.setItem('ems_pricingHistory', JSON.stringify(state.pricingHistory));
+  kirimTarifKeCloud();
   
   state.attendance.forEach(a => {
     if(a.weekKey === getWeekKey(new Date())) {
@@ -2269,6 +2313,24 @@ function renderGaji() {
   document.getElementById('gaji-total-nominal').textContent = fmtMoney(totGaji);
 }
 
+let gajiMenungguKirim = false, gajiTimer = null;
+function kirimGajiKeCloud(rates) {
+  gajiMenungguKirim = true;
+  clearTimeout(gajiTimer);
+  gajiTimer = setTimeout(() => {
+    fetch(GOOGLE_APPS_SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      cache: 'no-cache',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'setGaji', rates: rates })
+    })
+    .then(() => showToast('Gaji jabatan tersimpan ke Cloud (bot ikut terupdate)', 'success'))
+    .catch(() => showToast('Gagal menyimpan gaji ke Cloud', 'error'))
+    .finally(() => { setTimeout(() => { gajiMenungguKirim = false; }, 3000); });
+  }, 500);
+}
+
 function saveGaji() {
   const currentWeekKey = getWeekKey(new Date());
   const oldRates = { ...getSalaryRatesForWeek(currentWeekKey) };
@@ -2291,6 +2353,7 @@ function saveGaji() {
   state.salaryHistory[currentWeekKey] = { ...newRates };
   localStorage.setItem('ems_salaryRates', JSON.stringify(state.salaryRates));
   localStorage.setItem('ems_salaryHistory', JSON.stringify(state.salaryHistory));
+  kirimGajiKeCloud(newRates);
 
   recalcAllGaji();
   renderDashboard();
