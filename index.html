@@ -1525,7 +1525,7 @@ canvas { max-height: 240px; }
 
 <script>
 // ==================== 1. URL TERPUSAT STREAM DATA API SPREADSHEET (JSON MODE) ====================
-const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwJ85tmxefSKfuFvzmi13VMKHCAUsMSjaVyyriZk0It033XmUBPv87xGWk7GW1X8yQ9kA/exec'; 
+const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwpFIpKPBJzsafZFEA_FAGoDLPF5I0xQ-jdIRpbOZDjbxrSegzmnXELzJIRvrmujIGcFQ/exec'; 
 
 let state = {
   staff: [],
@@ -1862,6 +1862,7 @@ function submitAbsensiCloud() {
 
   const payload = {
     action: 'absen',
+    sumber: 'web',
     mingguKontrak: tanggalKontrakFormat,
     nama: staff.nama,
     hari: hariLabel,
@@ -1872,6 +1873,7 @@ function submitAbsensiCloud() {
     alprazolam: alprazolam
   };
 
+  const jumlahSebelum = state.attendance.length;
   btnSubmit.disabled = true;
   btnSubmit.innerText = "⏳ Mengirim data ke Cloud...";
 
@@ -1883,9 +1885,9 @@ function submitAbsensiCloud() {
     body: JSON.stringify(payload)
   })
   .then(() => {
-    showToast(`Absensi ${staff.nama} Berhasil Dikirim ke Spreadsheet!`, 'success');
     resetForm();
-    setTimeout(() => fetchGoogleSheetsCloudData(true), 2000);
+    verifikasiCloud(d => Array.isArray(d.attendance) && d.attendance.length > jumlahSebelum, `Absensi ${staff.nama} tersimpan di spreadsheet ✓`);
+    setTimeout(() => fetchGoogleSheetsCloudData(true), 3500);
   })
   .catch(err => {
     console.error(err);
@@ -2231,6 +2233,19 @@ function renderTarif() {
   document.getElementById('tarif-alprazolam').value = state.pricing.alprazolam;
 }
 
+// Cek ke spreadsheet apakah perubahan benar-benar masuk (fetch no-cors tidak bisa membaca balasan)
+function verifikasiCloud(cek, pesanOk) {
+  setTimeout(() => {
+    fetch(GOOGLE_APPS_SCRIPT_URL + '?cachebust=' + Date.now())
+      .then(r => r.json())
+      .then(d => {
+        if (cek(d)) showToast(pesanOk, 'success');
+        else showToast('⚠️ Belum masuk ke spreadsheet. Pastikan Code.gs sudah di-deploy ke versi terbaru (New version).', 'error');
+      })
+      .catch(() => showToast('Tidak bisa memverifikasi ke Cloud', 'error'));
+  }, 3000);
+}
+
 let tarifMenungguKirim = false, tarifTimer = null;
 function kirimTarifKeCloud() {
   tarifMenungguKirim = true;
@@ -2241,9 +2256,11 @@ function kirimTarifKeCloud() {
       mode: 'no-cors',
       cache: 'no-cache',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'setTarif', pingsan: state.pricing.pingsan, treatment: state.pricing.treatment, alprazolam: state.pricing.alprazolam })
+      body: JSON.stringify({ action: 'setTarif', sumber: 'web', pingsan: state.pricing.pingsan, treatment: state.pricing.treatment, alprazolam: state.pricing.alprazolam })
     })
-    .then(() => showToast('Tarif tersimpan ke Cloud (bot ikut terupdate)', 'success'))
+    .then(() => verifikasiCloud(
+      d => d.tarif && Number(d.tarif.pingsan) === Number(state.pricing.pingsan) && Number(d.tarif.treatment) === Number(state.pricing.treatment) && Number(d.tarif.alprazolam) === Number(state.pricing.alprazolam),
+      'Tarif tersimpan di spreadsheet ✓ (bot ikut terupdate)'))
     .catch(() => showToast('Gagal menyimpan tarif ke Cloud', 'error'))
     .finally(() => { setTimeout(() => { tarifMenungguKirim = false; }, 3000); });
   }, 800);
@@ -2323,9 +2340,11 @@ function kirimGajiKeCloud(rates) {
       mode: 'no-cors',
       cache: 'no-cache',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'setGaji', rates: rates })
+      body: JSON.stringify({ action: 'setGaji', sumber: 'web', rates: rates })
     })
-    .then(() => showToast('Gaji jabatan tersimpan ke Cloud (bot ikut terupdate)', 'success'))
+    .then(() => verifikasiCloud(
+      d => Array.isArray(d.jabatan) && Object.keys(rates).every(k => d.jabatan.some(j => normPos(j.nama) === normPos(k) && Number(j.gaji) === Number(rates[k]))),
+      'Gaji jabatan tersimpan di spreadsheet ✓ (bot ikut terupdate)'))
     .catch(() => showToast('Gagal menyimpan gaji ke Cloud', 'error'))
     .finally(() => { setTimeout(() => { gajiMenungguKirim = false; }, 3000); });
   }, 500);
